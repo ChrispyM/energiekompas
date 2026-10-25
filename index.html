@@ -1,0 +1,1340 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0C6E73">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Energie">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+</head><body>
+</head><body>
+</head><body>
+<title>Energiekompas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: één kolom, vaste tabbalk bovenaan, daarbinnen kaarten met een uurstrook als hoofdelement. */
+:root{
+  --bg:#EDF1EF; --panel:#FBFCFB; --panel2:#E1E9E6; --ink:#12232A; --muted:#546A70; --line:#C7D3CF;
+  --accent:#0C6E73; --accent-ink:#FFFFFF;
+  --sun:#D98E04; --sun-soft:#F3D58E;
+  --good:#1B8F61; --good-bg:#CDEBDC; --mid:#A87B0A; --mid-bg:#F3E4B5; --bad:#BF4430; --bad-bg:#F3CFC6;
+  --out:#2A66CC; --in:#C2410C; --cloud:#B7C5CB;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C171B; --panel:#13242A; --panel2:#1B3138; --ink:#E5EFEC; --muted:#93A9AE; --line:#27414A;
+    --accent:#4FC3BB; --accent-ink:#06181A;
+    --sun:#F2B33D; --sun-soft:#5C4713;
+    --good:#46C791; --good-bg:#14402F; --mid:#E1B84A; --mid-bg:#463A12; --bad:#F0806B; --bad-bg:#4A2219;
+    --out:#6FA4FF; --in:#FF9B62; --cloud:#3A4F57;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C171B; --panel:#13242A; --panel2:#1B3138; --ink:#E5EFEC; --muted:#93A9AE; --line:#27414A;
+  --accent:#4FC3BB; --accent-ink:#06181A;
+  --sun:#F2B33D; --sun-soft:#5C4713;
+  --good:#46C791; --good-bg:#14402F; --mid:#E1B84A; --mid-bg:#463A12; --bad:#F0806B; --bad-bg:#4A2219;
+  --out:#6FA4FF; --in:#FF9B62; --cloud:#3A4F57;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:0 40px}
+.wrap{max-width:920px;margin-inline:auto}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:26px;letter-spacing:-.01em}
+h2{font-size:19px}
+h3{font-size:16px}
+p{margin:0}
+.top{padding-block:18px 10px;display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline;justify-content:space-between}
+.stamp{font-size:12.5px;color:var(--muted)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:6px;border-bottom:1px solid var(--line);margin-inline:-16px;padding-inline:16px}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{appearance:none;border:0;background:transparent;color:var(--muted);font:600 14px var(--f-body);padding:9px 12px;border-radius:8px;white-space:nowrap;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.tab:focus-visible,.seg button:focus-visible,.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.days{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.seg button{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:500 13.5px var(--f-body);padding:7px 12px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);font-weight:600}
+main{display:flex;flex-direction:column;gap:14px;padding-top:14px}
+section[hidden],[hidden]{display:none!important}
+.panel{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h2+p,.card h3+p{margin-top:6px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.hero{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.hero .big{font-family:var(--f-display);font-size:30px;font-weight:700;letter-spacing:-.01em;margin-top:2px}
+.hero .lbl{font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;min-width:0}
+.stat .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.stat .val{font-family:var(--f-mono);font-weight:500;font-size:19px;margin-top:4px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.strip{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin-top:10px}
+.cell{height:30px;border-radius:3px;background:var(--panel2);display:flex;align-items:flex-end;justify-content:center;font:500 9.5px var(--f-mono);color:var(--muted);padding-bottom:2px}
+.cell.c0{background:var(--good-bg);color:var(--good)}
+.cell.c1{background:var(--mid-bg);color:var(--mid)}
+.cell.c2{background:var(--bad-bg);color:var(--bad)}
+.cell.best{box-shadow:0 0 0 2px var(--ink)}
+.cell.off{background:var(--panel2);opacity:.5}
+.cell.past{opacity:.4}
+.axis{display:grid;grid-template-columns:repeat(8,1fr);font:500 11px var(--f-mono);color:var(--muted);margin-top:4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.chart{width:100%;margin-top:8px}
+.chart svg{display:block;max-width:100%;touch-action:pan-y;cursor:ew-resize;-webkit-user-select:none;user-select:none}
+.chart svg:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.read{display:flex;flex-wrap:wrap;gap:2px 14px;align-items:baseline;margin-top:6px;font-size:13px;min-height:22px}
+.read b{font:600 14px var(--f-mono)}
+.read span i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-0.5px}
+.read span em{font:500 13px var(--f-mono);font-style:normal;color:var(--ink)}
+.grid{stroke:var(--line);stroke-width:1}
+.tick{fill:var(--muted);font:11px var(--f-mono)}
+.tip{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
+.tip li{padding-left:14px;position:relative}
+.tip li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.badge{display:inline-block;font:600 11.5px var(--f-body);padding:2px 8px;border-radius:99px;background:var(--mid-bg);color:var(--mid);vertical-align:2px;margin-left:6px}
+.badge.ok{background:var(--good-bg);color:var(--good)}
+.appl{display:flex;flex-direction:column;gap:6px}
+.appl .row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline}
+.appl .when{font-family:var(--f-display);font-size:22px;font-weight:700}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px 14px;margin-top:6px}
+.kv div{min-width:0}
+.kv b{display:block;font:500 15px var(--f-mono);font-variant-numeric:tabular-nums}
+.kv span{font-size:12px;color:var(--muted)}
+.save{color:var(--good);font-weight:600}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 16px;margin-top:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;min-width:0}
+label.f small{font-weight:400;color:var(--muted);font-size:12px}
+input[type=number],input[type=text],select,textarea{width:100%;min-width:0;font:15px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{min-height:64px;font-family:var(--f-mono);font-size:13px;resize:vertical}
+label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 14px var(--f-body);padding:9px 14px;border-radius:8px;cursor:pointer}
+.btn.warn{border-color:var(--bad);color:var(--bad)}
+.apt{display:grid;grid-template-columns:minmax(110px,1.4fr) repeat(6,minmax(64px,1fr));gap:8px;align-items:end;margin-top:10px}
+.apt .h{font-size:12px;color:var(--muted);font-weight:600}
+.apt .nm{font-weight:600;align-self:center}
+.apt-wrap{overflow-x:auto}
+.apt{min-width:600px}
+.err{color:var(--bad);font-size:12.5px;margin-top:2px}
+.measbar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;padding-bottom:8px}
+.measbar .ml{font-size:13px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.btn.sm{padding:6px 12px;font-size:13px}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.modal{position:fixed;inset:0;background:rgba(8,20,24,.55);display:flex;align-items:flex-end;justify-content:center;z-index:30;padding:0}
+.sheet{background:var(--panel);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:94vh;overflow:auto;border:1px solid var(--line)}
+@media (min-width:560px){.modal{align-items:center;padding:16px}.sheet{border-radius:14px}}
+.mgrp{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.mgrp h3{font-size:15px}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.mrow label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
+.msg{font-size:12.5px;color:var(--muted);margin-top:6px}
+.msg.err{color:var(--bad)}
+.mact{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.mtab{width:100%;border-collapse:collapse;margin-top:8px;font-size:13.5px}
+.mtab td,.mtab th{padding:6px 8px 6px 0;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.mtab th{font-size:12px;color:var(--muted);font-weight:600}
+.lvl{display:inline-block;font:600 12px var(--f-body);padding:2px 9px;border-radius:99px}
+.lvl.g{background:var(--good-bg);color:var(--good)}.lvl.m{background:var(--mid-bg);color:var(--mid)}.lvl.b{background:var(--bad-bg);color:var(--bad)}
+.guide p+p,.guide p+ul,.guide p+ol{margin-top:8px}
+.guide .steps{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.guide h2{margin-bottom:6px}
+.foot{font-size:12.5px;color:var(--muted);margin-top:8px}
+.foot a{color:var(--accent)}
+@media (max-width:480px){h1{font-size:23px}.hero .big{font-size:26px}}
+@media (prefers-reduced-motion:no-preference){.tab,.seg button{transition:background .15s,border-color .15s}}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>Energiekompas</h1>
+    <span class="stamp" id="stamp"></span>
+  </div>
+  <div class="measbar"><span class="ml" id="measline"></span><button class="btn sm" id="measbtn" type="button">Binnen invullen</button></div>
+  <div class="bar">
+    <div class="tabs" role="tablist" aria-label="Onderdelen" id="tabs">
+      <button class="tab" role="tab" data-tab="overzicht" aria-selected="true">Overzicht</button>
+      <button class="tab" role="tab" data-tab="apparaten" aria-selected="false">Apparaten</button>
+      <button class="tab" role="tab" data-tab="verwarming" aria-selected="false">Verwarming</button>
+      <button class="tab" role="tab" data-tab="instellingen" aria-selected="false">Instellingen</button>
+      <button class="tab" role="tab" data-tab="handleiding" aria-selected="false">Handleiding</button>
+    </div>
+    <div class="days seg" id="days" aria-label="Kies een dag"></div>
+  </div>
+  <main>
+    <section class="panel" id="p-overzicht"></section>
+    <section class="panel" id="p-apparaten" hidden></section>
+    <section class="panel" id="p-verwarming" hidden></section>
+    <section class="panel" id="p-instellingen" hidden></section>
+    <section class="panel" id="p-handleiding" hidden></section>
+  </main>
+  <div class="modal" id="meas-modal" hidden role="dialog" aria-modal="true" aria-labelledby="mm-t">
+    <div class="sheet">
+      <h2 id="mm-t">Wat meten je sensoren nu?</h2>
+      <p class="muted small" style="margin-top:6px">Lees de temperatuur en luchtvochtigheid af van het scherm van de sensor of uit de eWeLink-app. Daarmee rekent de app het ventilatieadvies en de binnentemperatuur van de vloerverwarming. Laat een veld leeg als je het niet weet.</p>
+      <div class="mgrp"><h3>Beneden (woonkamer)</h3><div class="mrow">
+        <label>Temperatuur (°C)<input type="text" inputmode="decimal" id="mm-bt" autocomplete="off" placeholder="20,5"></label>
+        <label>Luchtvochtigheid (%)<input type="text" inputmode="decimal" id="mm-bh" autocomplete="off" placeholder="50"></label></div><p class="msg" id="mm-bs"></p></div>
+      <div class="mgrp"><h3>Boven</h3><div class="mrow">
+        <label>Temperatuur (°C)<input type="text" inputmode="decimal" id="mm-ot" autocomplete="off" placeholder="19,0"></label>
+        <label>Luchtvochtigheid (%)<input type="text" inputmode="decimal" id="mm-oh" autocomplete="off" placeholder="55"></label></div><p class="msg" id="mm-os"></p></div>
+      <p class="msg err" id="mm-err" role="alert"></p>
+      <div class="mact"><button class="btn pri" id="mm-save" type="button">Opslaan</button><button class="btn" id="mm-skip" type="button">Nu overslaan</button></div>
+      <p class="msg">De app onthoudt je laatste temperatuur en luchtvochtigheid (boven en beneden) met het tijdstip, ook na sluiten of herstarten. Open je dit scherm opnieuw, dan staan ze er weer in; pas alleen aan wat veranderd is. Bij Instellingen onder "Metingen binnen" zie je ze ook.</p>
+    </div>
+  </div>
+  <p class="foot"><span id="wxsrc">Weergegevens: MET Norway (api.met.no), licentie CC BY 4.0.</span> Zonnestand is berekend voor Amsterdam. Alle prijzen en verbruiken zijn schattingen; pas ze aan bij Instellingen.</p>
+</div>
+
+<template id="guide-tpl">
+<div class="card guide">
+<h2>Wat deze app voor je doet</h2>
+<p>Energiekompas vertelt je per uur wanneer stroom en warmte het goedkoopst zijn in jouw huis, en wat je dan het best kunt doen: de vaatwasser, wasmachine, droger en inductieplaat starten, de vloerverwarming extra laten opwarmen of juist laten rusten, en de houtkachel aansteken. Het houdt rekening met je dynamische contract, je zonnepanelen, de isolatie, de weersverwachting en de begrenzing van je aansluiting.</p>
+<p class="muted small">Alle bedragen zijn schattingen op basis van de ingevulde gegevens. De app stuurt niets aan: jij start de apparaten zelf.</p>
+</div>
+
+<div class="card guide">
+<h2>Zo gebruik je hem</h2>
+<ul class="tip">
+<li><b>Dag kiezen:</b> bovenaan kies je vandaag, morgen of overmorgen. Voor vandaag telt alleen wat nog komt. Uren die voorbij zijn, staan gedimd.</li>
+<li><b>Overzicht:</b> het beste moment voor stroom, de prijs per uur, de zonopbrengst en een korte lijst met wat je nu kunt doen. De schuifbalk onder elke grafiek toont de waarde op een uur. Sleep over de grafiek.</li>
+<li><b>Apparaten:</b> per apparaat het goedkoopste startuur. De planning houdt je aansluiting in de gaten: apparaten die samen te veel vragen, worden verschoven.</li>
+<li><b>Verwarming:</b> het verwachte verloop van de binnentemperatuur, wanneer je de vloerverwarming laat opwarmen, wat gas of de warmtepomp kost, en het stookadvies voor de houtkachel.</li>
+<li><b>Instellingen:</b> bovenaan staan je <b>Metingen binnen</b>: welke waarden je hebt ingevuld en wanneer. Daaronder je woning, panelen, tarieven en apparaten. Alles wat je wijzigt, wordt op dit apparaat bewaard en meteen doorgerekend.</li>
+<li><b>Binnen invullen:</b> bij het openen vraagt de app naar de temperatuur en luchtvochtigheid van de sensoren beneden en boven. Heb je ze het afgelopen uur al ingevuld, dan vraagt hij het niet nog eens. Met de knop rechtsboven bij Binnen invullen kan het altijd.</li>
+</ul>
+</div>
+
+<div class="card guide">
+<h2>Vul dit eerst in</h2>
+<p>De standaardwaarden zijn een redelijke gok. Deze zes instellingen bepalen het meest:</p>
+<ul class="tip">
+<li><b>Belasting en opslag per kWh:</b> kijk in je contract of in de app van je leverancier. Vergelijk één uurprijs met wat de app toont en pas het getal aan tot ze overeenkomen.</li>
+<li><b>Woonoppervlak, vloerverwarming en isolatie:</b> het oppervlak met vloerverwarming (beneden) en het totale oppervlak. Kies bij isolatie het niveau dat bij je energielabel past.</li>
+<li><b>Zonnepanelen:</b> totaal vermogen in kWp, richting en hellingshoek.</li>
+<li><b>Aansluiting:</b> de grootte van je aansluiting (bijvoorbeeld 17,3 kW). De app houdt 20% marge.</li>
+<li><b>Metingen binnen:</b> de temperatuur en luchtvochtigheid beneden en boven. Handmatige waarden gelden 8 uur.</li>
+<li><b>Gasprijs en terugleverkosten:</b> te vinden op je jaarnota of in de app van je leverancier.</li>
+</ul>
+</div>
+
+<div class="card guide">
+<h2>Hoe er gerekend wordt</h2>
+<ul class="tip">
+<li><b>Stroomprijs:</b> de beursprijs van de volgende dag (EPEX day-ahead, uurgemiddelde) maal 1,21 btw, plus je opslag. Zijn de beursprijzen nog niet bekend, dan toont de app een typisch verloop en zegt dat erbij. Je kunt ook je eigen prijzen plakken.</li>
+<li><b>Terugleveren:</b> bij een dynamisch contract volgt de terugleverprijs de beurs. Is die negatief, dan kost terugleveren geld en loont het om zonnestroom zelf te gebruiken.</li>
+<li><b>Zonopbrengst:</b> uit de stand van de zon en de straling die het weermodel voorspelt. Zonder modelstraling schat de app die uit de bewolking.</li>
+<li><b>Warmte:</b> het huis verliest warmte naar buiten, wint zon en interne warmte, en de vloer slaat warmte op. Per uur kiest de app de goedkoopste bron (warmtepomp of gas). De elektrische panelen boven rekenen tegen de volle stroomprijs.</li>
+<li><b>Slim stoken:</b> de vloer mag een halve graad rond de gewenste temperatuur schommelen. Hij warmt op in de goedkope uren en rust in de dure.</li>
+<li><b>Houtkachel:</b> de app zoekt de avonduren met de duurste warmte en een grote warmtevraag. Alleen de benedenverdieping profiteert mee, dus het voordeel zit vooral in comfort.</li>
+</ul>
+</div>
+
+<div class="card guide">
+<h2>Ventileren op luchtvochtigheid</h2>
+<p>Het blok <b>Ventileren</b> op het overzicht gebruikt de metingen die je invult. De app rekent de relatieve luchtvochtigheid om naar hoeveel vocht er echt in de lucht zit (gram per m³) en vergelijkt dat met de buitenlucht per uur. Is het buiten droger, dan haalt ventileren vocht weg. Is het buiten vochtiger, dan helpt het niet.</p>
+<ul class="tip">
+<li><b>40 tot 60%</b> is goed. Ventileren hoeft dan niet extra.</li>
+<li><b>60 tot 70%</b> is aan de hoge kant, <b>boven 70%</b> te vochtig: kans op schimmel en condens.</li>
+<li><b>Onder 40%</b> is droog. Extra ventileren maakt dat meestal erger.</li>
+<li>Je krijgt de beste uren (tussen 08:00 en 22:00), de kosten van een kwartier ramen open en wat je met je warmteterugwinning kunt doen. Boven let de app op koude, vochtige kamers.</li>
+<li>De buitenvochtigheid komt uit de weersverwachting. Ontbreekt die, dan rekent de app met 85% en zegt dat erbij.</li>
+</ul>
+</div>
+
+<div class="card guide">
+<h2>Wat de app niet weet</h2>
+<ul class="tip">
+<li>Hij ziet je P1-meter, je Enphase-omvormer en je sensoren niet rechtstreeks. Wat je meet, vul je in.</li>
+<li>De leveranciersopslag, je werkelijke warmteverlies en de COP van je warmtepomp zijn schattingen. Zie het als richting.</li>
+<li>De binnentemperatuur in de grafiek is een berekening, geen meting, tenzij je de temperatuur beneden hebt ingevuld (onder Binnen invullen).</li>
+<li>Het buitenweer komt uit een verwachting. Bij plotselinge wolken of regen kan de zonopbrengst afwijken.</li>
+</ul>
+</div>
+
+<div class="card guide">
+<h2>Gegevens en bronnen</h2>
+<ul class="tip">
+<li><b>Weer:</b> KNMI HARMONIE (2 km boven Nederland) en ECMWF via Open-Meteo.com, met MET Norway als reserve. In de voettekst staat welke bron actief is.</li>
+<li><b>Prijzen:</b> EPEX day-ahead Nederland via Energy-Charts. Rond 13:00 verschijnen de prijzen van de volgende dag.</li>
+<li><b>Gas:</b> een gemiddeld consumententarief dat je zelf instelt. De groothandelsprijs (TTF) is alleen ter informatie.</li>
+<li><b>Ververs:</b> de pagina haalt bij openen en daarna elk half uur zelf nieuwe gegevens op, als de browser dat toestaat. Staat dat uit, dan gebruikt hij het bestand data.json dat elk uur wordt bijgewerkt.</li>
+</ul>
+<p class="muted small">Open-Meteo is gratis voor niet-commercieel gebruik (CC BY 4.0). MET Norway: CC BY 4.0.</p>
+</div>
+
+<div class="card guide">
+<h2>Online zetten zonder eigen computer</h2>
+<p>De pagina is één bestand met een paar hulpbestanden. Hij draait volledig in je browser, dus je hebt geen server nodig. Zet de map op een gratis hostingdienst en open het adres op elk apparaat, ook buiten je wifi.</p>
+<p style="margin-top:10px"><b>Route A: GitHub Pages (aanbevolen, ververst zelf elk uur)</b></p>
+<ol class="steps">
+<li>Maak een gratis account op github.com en kies rechtsboven + en dan <b>New repository</b>. Geef hem de naam <b>energiekompas</b> en kies <b>Public</b>. Kies <b>Create repository</b>.</li>
+<li>Kies <b>uploading an existing file</b> en sleep alle bestanden uit de zip erin, behalve <b>update.yml</b> (dat is stap 3). Kies <b>Commit changes</b>.</li>
+<li>Kies <b>Add file</b>, dan <b>Create new file</b>. Typ als naam <b>.github/workflows/update.yml</b> (typ de schuine strepen mee, dan ontstaan de mappen vanzelf) en plak de inhoud van <b>update.yml</b> uit de zip. Kies <b>Commit changes</b>.</li>
+<li>Ga naar <b>Settings</b>, <b>Actions</b>, <b>General</b>, onderaan <b>Workflow permissions</b>. Kies <b>Read and write permissions</b> en <b>Save</b>.</li>
+<li>Ga naar <b>Settings</b>, <b>Pages</b>. Kies bij <b>Source</b> de optie <b>Deploy from a branch</b>, branch <b>main</b>, map <b>/ (root)</b>, en <b>Save</b>. Na een paar minuten staat bovenaan het adres, zoals <b>https://jouwnaam.github.io/energiekompas/</b>.</li>
+<li>Ga naar het tabblad <b>Actions</b>, kies <b>Gegevens verversen</b> en <b>Run workflow</b>. Daarna draait het elk uur zelf.</li>
+</ol>
+<p class="muted small">Let op: de repository is openbaar. Zet geen persoonlijke gegevens (adres, naam) in settings.json. Je instellingen in de app blijven op je eigen apparaat. GitHub kan geplande taken uitzetten na 60 dagen zonder activiteit in de repository. Je krijgt dan een e-mail; kies in Actions <b>Enable workflow</b>. De pagina blijft ondertussen zelf gegevens ophalen.</p>
+<p style="margin-top:10px"><b>Route B: Netlify of Cloudflare Pages (het snelst)</b></p>
+<p>Pak de zip uit en sleep de map naar de uploadpagina van Netlify (app.netlify.com/drop) of maak een project bij Cloudflare Pages met "Direct upload". Je krijgt meteen een adres. Maak een gratis account zodat de site blijft staan. Hier is geen vaste verversing: de pagina haalt zelf het weer en de prijzen op wanneer hij opent. Lukt dat niet in jouw browser, dan toont hij een verouderd bestand of schattingen.</p>
+</div>
+
+<div class="card guide">
+<h2>Als app op je telefoon</h2>
+<p>Open het online adres op je telefoon.</p>
+<ul class="tip">
+<li><b>iPhone (Safari):</b> deelicoon, <b>Zet op beginscherm</b>.</li>
+<li><b>Android (Chrome):</b> menu met drie puntjes, <b>App installeren</b> of <b>Toevoegen aan startscherm</b>.</li>
+</ul>
+<p class="muted small">Je krijgt een pictogram dat de pagina schermvullend opent. Je instellingen blijven per apparaat bewaard.</p>
+</div>
+
+<div class="card guide">
+<h2>Problemen oplossen</h2>
+<ul class="tip">
+<li><b>"Weer van … · verouderd":</b> de gegevens zijn ouder dan 30 uur. Open de pagina met internet, of start in GitHub de taak <b>Gegevens verversen</b>.</li>
+<li><b>Prijzen zijn "indicatief":</b> de beursprijzen van die dag zijn er nog niet (rond 13:00 komen die van morgen) of ophalen is mislukt. Plak zonodig je eigen prijzen bij Instellingen.</li>
+<li><b>Geen dag te zien:</b> er is geen volledige dag in de verwachting. Verversen lost dat op.</li>
+<li><b>De app vraagt steeds naar de metingen:</b> dat gebeurt als de laatste invoer ouder is dan een uur. Kies Nu overslaan als je ze niet hebt.</li>
+<li><b>Instellingen kwijt:</b> ze staan in de browser van dat apparaat. Wis je de browsergegevens of gebruik je een privévenster, dan zijn ze weg.</li>
+</ul>
+</div>
+</template>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Data: weersverwachting (MET Norway), opgehaald zo 11 okt 2026 ---------- */
+var SNAP={
+  start:Date.UTC(2026,9,11,4,0),
+  stamp:'zo 11 okt 2026, 13:22',
+  /* EPEX day-ahead Nederland in €/MWh, uurgemiddelde, per lokale dag (00:00 t/m 23:00) */
+  epex:{'2026-10-11':[115.42,105.57,101.21,100.28,103.6,102.47,105.81,126.07,140.75,122.16,83.78,33.17,22.89,14.61,31.37,67.64,117.13,197.05,228.11,234.79,233.84,214.74,199.9,183.88],
+        '2026-10-12':[178.28,172.2,168,165.89,165.48,178.4,219.35,257.18,263.51,221.53,191.6,170,151.6,142.27,146.53,157.9,181.3,231.54,272,279.54,250.41,200,187.37,177.66]},
+  epexStamp:'zo 11 okt 2026, 13:22',
+  ttf:{v:79.38,d:'9 okt 2026'},
+  temp:[9.1,9,9,9.5,10.1,11.2,12,12.4,13,13.6,13.9,13.7,13.1,11.7,11.2,11,10.4,9.7,9.9,9.8,9,8.3,8,7.5,7.6,7.6,7.5,8.2,9.5,11.1,12.9,14.3,14.6,14.8,15.1,15.1,14.3,13.2,13.2,13.2,13.4,13.6,13.6,13.2,12.5,12.5,12.7,12.8,13,13.3,13.3,13.7,14.1,14.7,15.9,17.5,17.5,17,17.9,18.3,17.7,17.3,16.9,16.45,16,15.55],
+  cloud:[94.5,58.6,75.8,78.9,52.3,43,56.2,53.1,28.1,22.7,29.7,27.3,24.2,50,43,53.9,54.7,54.7,38.3,16.4,16.4,21.9,57.8,25.8,13.3,34.4,29.7,71.9,45.3,29.7,36.7,100,100,100,43.7,85.9,67.2,97.7,100,100,100,100,96.9,100,100,100,100,100,100,100,100,100,100,73.4,98.4,99.2,100,100,71.1,100,93,35.9,32,30.05,28.1,26.15]
+};
+var TZ='Europe/Amsterdam', LAT=52.37, LON=4.90;
+var INSUL={zeer:{n:'Zeer goed (label A+ of beter)',v:0.9},goed:{n:'Goed (label A of B)',v:1.4},matig:{n:'Matig (label C of D)',v:2.1},slecht:{n:'Slecht (label E, F of G)',v:3.0}};
+
+/* ---------- Instellingen ---------- */
+var DEF={
+  insul:'goed',area:130,wtw:true,tset:20.5,band:0.5,supply:32,pmax:6,heatsrc:'hybride',cop:0.36,gaseff:0.96,
+  kwp:4.5,paz:180,tilt:35,base:0.25,
+  opslag:0.14,gas:1.70,feedin:0.06,fimode:'dyn',terugkosten:0.02,conn:17.3,ground:74,upel:true,meas:{ben:{t:0,h:0,at:0},bov:{t:0,h:0,at:0}},stove:true,stovekw:4,stoveh:3,woodcost:0,showermin:8,showerlpm:8,
+  appl:[
+    {name:'Vaatwasser',kwh:0.9,dur:2.5,from:8,to:23,typ:20,kw:2.0},
+    {name:'Wasmachine',kwh:0.7,dur:2,from:8,to:21,typ:18,kw:2.0},
+    {name:'Droger',kwh:1.5,dur:2.5,from:9,to:22,typ:19,kw:1.0},
+    {name:'Inductieplaat',kwh:1.0,dur:1,from:16,to:20,typ:18,kw:3.5}
+  ],
+  prices:{}
+};
+var st=clone(DEF);
+var ui={tab:'overzicht',day:0};
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function load(){
+  try{
+    var s=localStorage.getItem('ek.settings'); if(s){var o=JSON.parse(s); st=merge(clone(DEF),o);}
+    var u=localStorage.getItem('ek.ui'); if(u){var p=JSON.parse(u); if(p&&p.tab)ui.tab=p.tab; if(p&&typeof p.day==='number')ui.day=p.day;}
+  }catch(e){}
+  measLoadLocal();
+}
+function merge(a,b){
+  Object.keys(b||{}).forEach(function(k){
+    if(Array.isArray(a[k])&&Array.isArray(b[k])){a[k]=a[k].map(function(it,i){return b[k][i]?merge(it,b[k][i]):it;});}
+    else if(a[k]&&typeof a[k]==='object'&&b[k]&&typeof b[k]==='object'){a[k]=merge(a[k],b[k]);}
+    else if(typeof b[k]===typeof a[k]){a[k]=b[k];}
+  });
+  return a;
+}
+function measPack(){var o={};['ben','bov'].forEach(function(l){var m=st.meas[l];o[l]=[m.t,m.h,m.at];});return o;}
+function measApply(o){var ch=false;if(!o)return false;['ben','bov'].forEach(function(l){var a=o[l],m=st.meas[l];
+  if(a&&a.length>=3&&+a[2]>m.at&&+a[0]>0){m.t=+a[0];m.h=+a[1]||0;m.at=+a[2];ch=true;}});return ch;}
+function measLoadLocal(){
+  try{measApply(JSON.parse(localStorage.getItem('ek.meas')));}catch(e){}
+  try{var c=document.cookie.match(/(?:^|; )ek_meas=([^;]*)/);if(c)measApply(JSON.parse(decodeURIComponent(c[1])));}catch(e){}
+}
+function measSaveLocal(){
+  var j=JSON.stringify(measPack());
+  try{localStorage.setItem('ek.meas',j);}catch(e){}
+  try{document.cookie='ek_meas='+encodeURIComponent(j)+'; max-age=31536000; path=/; SameSite=Lax';}catch(e){}
+}
+/* Binnen claude.ai: privé bewaren in de database van de kijker (alleen als die beschikbaar is). */
+var remote={db:null,path:null};
+function measRemoteLoad(){
+  return new Promise(function(res){
+    var done=false;function fin(){if(!done){done=true;res();}}
+    setTimeout(fin,1800);
+    try{
+      if(!window.claude||typeof window.claude.use!=='function'){fin();return;}
+      Promise.all([window.claude.use('db'),window.claude.use('user')]).then(function(r){
+        var db=r[0],u=r[1];if(!db||!u||typeof u.id!=='function'){fin();return;}
+        return Promise.resolve(u.id()).then(function(id){
+          if(!id)return;
+          remote.db=db;remote.path='data/users/'+id+'/meas';
+          return db.doc(remote.path).get().then(function(snap){
+            if(snap&&snap.exists){var d=typeof snap.data==='function'?snap.data():snap.data;if(d&&measApply(d.m)){measSaveLocal();}}
+          });
+        });
+      }).then(fin,fin);
+    }catch(e){fin();}
+  });
+}
+function measRemoteSave(){
+  try{if(remote.db&&remote.path)remote.db.doc(remote.path).set({m:measPack(),at:Date.now()}).then(null,function(){});}catch(e){}
+}
+function save(){try{localStorage.setItem('ek.settings',JSON.stringify(st));}catch(e){}measSaveLocal();}
+function saveUi(){try{localStorage.setItem('ek.ui',JSON.stringify(ui));}catch(e){}}
+
+/* ---------- Hulpfuncties ---------- */
+function $(id){return document.getElementById(id);}
+function pad(n){return (n<10?'0':'')+n;}
+function nf(v,d){return (Math.round(v*Math.pow(10,d))/Math.pow(10,d)).toFixed(d).replace('.',',');}
+function eur(v,d){return (v<0?'-':'')+'€ '+nf(Math.abs(v),d===undefined?2:d);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function hh(h){return pad(h)+':00';}
+function win(a,len){return hh(a)+'–'+hh(Math.min(24,a+len));}
+var tfmt=new Intl.DateTimeFormat('nl-NL',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function clock(ms){return tfmt.format(new Date(ms));}
+var pfmt=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'});
+function localOf(ms){var p={};pfmt.formatToParts(new Date(ms)).forEach(function(o){p[o.type]=o.value;});return {key:p.year+'-'+p.month+'-'+p.day,h:+p.hour,y:+p.year,m:+p.month,d:+p.day};}
+var dshort=new Intl.DateTimeFormat('nl-NL',{timeZone:TZ,weekday:'short',day:'numeric',month:'short'});
+var dlong=new Intl.DateTimeFormat('nl-NL',{timeZone:TZ,weekday:'long'});
+
+/* ---------- Zonnestand en instraling ---------- */
+function solarPos(ms){
+  var R=Math.PI/180, jd=ms/86400000+2440587.5, n=jd-2451545.0;
+  var L=(280.460+0.9856474*n)%360, g=((357.528+0.9856003*n)%360)*R;
+  var lam=(L+1.915*Math.sin(g)+0.020*Math.sin(2*g))*R, eps=(23.439-0.0000004*n)*R;
+  var ra=Math.atan2(Math.cos(eps)*Math.sin(lam),Math.cos(lam)), dec=Math.asin(Math.sin(eps)*Math.sin(lam));
+  var gmst=(18.697374558+24.06570982441908*n)%24;
+  var lst=((((gmst*15+LON)%360)+360)%360)*R, ha=lst-ra, lat=LAT*R;
+  var sinEl=Math.sin(lat)*Math.sin(dec)+Math.cos(lat)*Math.cos(dec)*Math.cos(ha);
+  var az=Math.atan2(-Math.sin(ha)*Math.cos(dec),Math.cos(lat)*Math.sin(dec)-Math.sin(lat)*Math.cos(dec)*Math.cos(ha));
+  return {el:Math.asin(sinEl)/R, az:(az/R+360)%360};
+}
+function irr(el,az,cloud){
+  if(el<=0.5)return {ghi:0,poa:0};
+  var R=Math.PI/180, e=el*R, s=Math.sin(e);
+  var am=1/(s+0.50572*Math.pow(el+6.07995,-1.6364));
+  var dni=1353*Math.pow(0.7,Math.pow(am,0.678));
+  var dhi=0.1*dni, c=cloud/100, cf=1-0.75*Math.pow(c,3.4);
+  var tilt=st.tilt*R, cosI=s*Math.cos(tilt)+Math.cos(e)*Math.sin(tilt)*Math.cos((az-st.paz)*R);
+  var poaClear=dni*Math.max(0,cosI)+dhi*(1+Math.cos(tilt))/2;
+  return {ghi:(dni*s+dhi)*cf, poa:poaClear*cf};
+}
+
+/* Gebruikt het weermodel zelf de instraling (direct, diffuus) dan nemen we die; anders schatten we hem uit de bewolking. */
+function irrM(x){
+  if(typeof x.dni!=='number'||typeof x.dhi!=='number'||typeof x.ghi!=='number')return irr(x.el,x.az,x.cloud);
+  if(x.el<=0.5)return {ghi:0,poa:0};
+  var R=Math.PI/180, s=Math.sin(x.el*R), tilt=st.tilt*R, cosI=s*Math.cos(tilt)+Math.cos(x.el*R)*Math.sin(tilt)*Math.cos((x.az-st.paz)*R);
+  var poa=x.dni*Math.max(0,cosI)+x.dhi*(1+Math.cos(tilt))/2+0.2*x.ghi*(1-Math.cos(tilt))/2;
+  return {ghi:x.ghi,poa:Math.max(0,poa)};
+}
+/* ---------- Dagen opbouwen uit de weerdata ---------- */
+var DAYS=[];
+function buildDays(){
+  var map={},order=[],todayKey=localOf(Date.now()).key;
+  for(var i=0;i<SNAP.temp.length;i++){
+    var ms=SNAP.start+i*3600000, l=localOf(ms);
+    if(!map[l.key]){map[l.key]={key:l.key,y:l.y,m:l.m,d:l.d,hours:[]};order.push(l.key);}
+    map[l.key].hours[l.h]={h:l.h,ms:ms+1800000,temp:SNAP.temp[i],cloud:SNAP.cloud[i]};
+    if(SNAP.ghi&&SNAP.dni&&SNAP.dhi){var hh0=map[l.key].hours[l.h];hh0.ghi=SNAP.ghi[i];hh0.dni=SNAP.dni[i];hh0.dhi=SNAP.dhi[i];}
+    if(SNAP.rh)map[l.key].hours[l.h].rh=SNAP.rh[i];
+  }
+  var out=[];
+  order.forEach(function(k){
+    if(k<todayKey)return;
+    var dd=map[k], f=0;
+    /* Begint de verwachting midden op de dag, vul dan de uren die al voorbij zijn aan met het eerste beschikbare uur. */
+    while(f<24&&!dd.hours[f])f++;
+    for(var q=0;q<f&&f<24;q++)dd.hours[q]={h:q,ms:dd.hours[f].ms-(f-q)*3600000,temp:dd.hours[f].temp,cloud:dd.hours[f].cloud,ghi:dd.hours[f].ghi,dni:dd.hours[f].dni,dhi:dd.hours[f].dhi,rh:dd.hours[f].rh,est:true};
+    var ok=dd.hours.length===24;
+    for(var h=0;h<24&&ok;h++){if(!dd.hours[h])ok=false;}
+    if(!ok)return;
+    var t0=dd.hours[0].ms-1800000, rise=null, set=null, maxEl=-90, noon=t0, prev=-90;
+    for(var s=0;s<720;s++){
+      var t=t0+s*120000, p=solarPos(t);
+      if(p.el>-0.833&&prev<=-0.833&&rise===null)rise=t;
+      if(p.el<=-0.833&&prev>-0.833)set=t;
+      if(p.el>maxEl){maxEl=p.el;noon=t;}
+      prev=p.el;
+    }
+    dd.rise=rise;dd.set=set;dd.maxEl=maxEl;dd.noon=noon;
+    dd.minH=(k===todayKey)?Math.min(23,localOf(Date.now()).h+1):0;
+    dd.dow=new Date(Date.UTC(dd.y,dd.m-1,dd.d)).getUTCDay();
+    dd.label=dshort.format(new Date(dd.hours[12].ms)).replace('.','');
+    dd.name=dlong.format(new Date(dd.hours[12].ms));
+    dd.hours.forEach(function(x){var p=solarPos(x.ms);x.el=p.el;x.az=p.az;});
+    out.push(dd);
+  });
+  return out;
+}
+
+/* ---------- Rekenmodel ---------- */
+var cache={};
+function effCost(hr,load,price,fi){
+  var surplus=Math.max(0,hr.pv-st.base), share=Math.min(1,surplus/Math.max(load,0.01));
+  var f=(fi===undefined)?st.feedin:fi;
+  return share*f+(1-share)*price;
+}
+function bump(h,c,w){var x=(h-c)/w;return Math.exp(-x*x);}
+function priceModel(day,hrs){
+  var mid=0,n=0;
+  for(var h=10;h<=16;h++){mid+=hrs[h].cloud;n++;}
+  var sf=Math.max(0.2,1-0.8*(mid/n)/100), wk=(day.dow===0||day.dow===6)?-0.012:0, out=[];
+  for(var i=0;i<24;i++){
+    var spot=0.078+wk+0.035*bump(i,8,1.6)+0.07*bump(i,18.5,2)-0.045*sf*bump(i,13.5,3)-0.02*bump(i,3.5,2.5);
+    out.push(spot*1.21+st.opslag);
+  }
+  return out;
+}
+function parsePrices(txt){
+  if(!txt||!txt.trim())return null;
+  var parts=txt.replace(/\r/g,'\n').split(/[\s;]+/).filter(Boolean).map(function(s){return parseFloat(s.replace(',','.'));});
+  if(parts.length!==24||parts.some(function(x){return !isFinite(x);}))return {error:'Ik vind '+parts.length+' waarden, nodig zijn er 24 (een per uur, vanaf 00:00).'};
+  var mx=Math.max.apply(null,parts.map(Math.abs));
+  if(mx>3)parts=parts.map(function(x){return x/100;});
+  return {values:parts};
+}
+function bestWin(arr,len,dir,from){
+  var bi=0,bv=null;
+  for(var s=Math.min(from||0,24-len);s+len<=24;s++){
+    var sum=0;for(var k=0;k<len;k++)sum+=arr[s+k];
+    if(bv===null||(dir>0?sum>bv:sum<bv)){bv=sum;bi=s;}
+  }
+  return {s:bi,avg:bv/len};
+}
+function copAt(t){return Math.min(5.5,st.cop*(st.supply+273.15)/Math.max(8,st.supply-t+5));}
+var IND=null,OUT=null;
+/* Metingen binnen: handmatig ingevuld (bewaard met tijdstip) of van een sensor (indoor.json). De nieuwste telt. */
+function measRec(loc){
+  var m=st.meas&&st.meas[loc], a=IND&&IND[loc==='ben'?'beneden':'boven'], man=null, aut=null;
+  if(m&&m.at>0&&m.t>0)man={t:m.t,h:m.h>0?m.h:null,at:m.at,auto:false};
+  if(a&&typeof a.t==='number'&&typeof a.at==='number'&&a.t>0)aut={t:a.t,h:(typeof a.h==='number'?a.h:null),at:a.at,auto:true};
+  if(man&&aut)return aut.at>man.at?aut:man;
+  return man||aut;
+}
+/* Laatst bekende waarde, ook als die oud is: voor het invulscherm. */
+function lastRec(loc){
+  var m=st.meas&&st.meas[loc],a=IND&&IND[loc==='ben'?'beneden':'boven'],man=null,aut=null;
+  if(m&&m.at>0&&m.t>0)man={t:m.t,h:m.h>0?m.h:null,at:m.at,auto:false};
+  if(a&&typeof a.t==='number'&&typeof a.at==='number'&&a.t>0)aut={t:a.t,h:(typeof a.h==='number'?a.h:null),at:a.at,auto:true};
+  if(man&&aut)return aut.at>man.at?aut:man;
+  return man||aut;
+}
+function nowTemp(){
+  var b=measRec('ben');
+  if(b&&b.t>5&&b.t<40&&Date.now()-b.at<(b.auto?3:8)*3600000)return {t:b.t,at:b.at,auto:b.auto};
+  return null;
+}
+function absHum(t,rh){var es=6.112*Math.exp(17.62*t/(243.12+t));return 216.7*(rh/100*es)/(273.15+t);}
+function dewPoint(t,rh){var g=Math.log(rh/100)+17.62*t/(243.12+t);return 243.12*g/(17.62-g);}
+function ageTxt(at){
+  var m=Math.round((Date.now()-at)/60000);
+  if(m<1)return 'zojuist';
+  if(m<60)return m+' min geleden';
+  var h=Math.floor(m/60);
+  if(h<24)return h+' u '+(m%60)+' min geleden';
+  return Math.floor(h/24)+' dagen geleden';
+}
+function parseNum(v){
+  v=String(v||'').trim().replace(',','.');
+  if(v==='')return null;
+  var n=Number(v);return isFinite(n)?n:NaN;
+}
+function measLine(){
+  var b=measRec('ben'),o=measRec('bov');
+  function part(n,r){return r?n+' '+nf(r.t,1)+' °C'+(r.h?' · '+nf(r.h,0)+'%':'')+' ('+clock(r.at)+')':n+' niet ingevuld';}
+  if(!b&&!o)return 'Binnen: nog niets ingevuld';
+  return 'Binnen: '+part('beneden',b)+' · '+part('boven',o);
+}
+/* ---------- Ventilatieadvies op basis van luchtvochtigheid ---------- */
+function ventAdvice(c){
+  var mb=measRec('ben'),mo=measRec('bov'),lim=12*3600000,now=Date.now();
+  var okB=mb&&mb.h&&now-mb.at<lim, okO=mo&&mo.h&&now-mo.at<lim;
+  if(!okB&&!okO)return {none:true,stale:!!(mb||mo)};
+  var ref=okB?mb:mo, ahIn=absHum(ref.t,ref.h), v={ref:ref,refName:okB?'beneden':'boven',mb:okB?mb:null,mo:okO?mo:null,ahIn:ahIn,tdIn:dewPoint(ref.t,ref.h)};
+  v.assumed=false;
+  v.ahOut=c.hrs.map(function(x){var rh=(typeof x.rh==='number')?x.rh:85;if(typeof x.rh!=='number')v.assumed=true;return absHum(x.temp,rh);});
+  v.gain=v.ahOut.map(function(a){return ahIn-a;});
+  v.cost15=c.hrs.map(function(x,i){return 0.34*250*0.25*Math.max(0,ref.t-x.temp)/1000*(c.heat?c.heat.cost[i]:0.08);});
+  var worst=Math.max(okB?mb.h:0,okO?mo.h:0), best=Math.min(okB?mb.h:100,okO?mo.h:100);
+  v.worst=worst;
+  v.level=worst>70?'hoog':(worst>60?'verhoogd':(best<40?'droog':'goed'));
+  var lo=Math.max(8,c.minH||0), hi=22, runs=[], cur=null, i;
+  for(i=lo;i<=hi;i++){
+    if(v.gain[i]>=1.0){if(!cur){cur={s:i,e:i,g:0,t:0};runs.push(cur);}cur.e=i;cur.g+=v.gain[i];cur.t+=c.hrs[i].temp;}
+    else cur=null;
+  }
+  runs.forEach(function(r){r.n=r.e-r.s+1;r.avg=r.g/r.n;r.tavg=r.t/r.n;r.cost=v.cost15[r.s];});
+  runs.sort(function(a,b){return b.g-a.g;});
+  v.win=runs.length?runs[0]:null;
+  v.boven=null;
+  if(okO&&okB&&mo.t<mb.t-1.5&&mo.h>60)v.boven=true;
+  return v;
+}
+function ventHTML(c){
+  var v=c.vent,h='<div class="card" id="vent-card"><h2>Ventileren</h2>';
+  if(v.none){
+    return h+'<p class="muted" style="margin-top:6px">'+(v.stale?'Je metingen zijn ouder dan 12 uur.':'Nog geen luchtvochtigheid ingevuld.')+' Vul de waarden van je sensoren in, dan geef ik advies wanneer ventileren het meeste oplevert.</p><div class="mact"><button class="btn pri" type="button" data-open-meas="1">Binnen invullen</button></div></div>';
+  }
+  var cls={hoog:'b',verhoogd:'m',goed:'g',droog:'m'}[v.level], lab={hoog:'te vochtig',verhoogd:'aan de hoge kant',goed:'goed',droog:'droog'}[v.level];
+  var kv='<div class="kv">';
+  if(v.mb)kv+='<div><b>'+nf(v.mb.h,0)+'% · '+nf(v.mb.t,1)+' °C</b><span>beneden, gemeten '+clock(v.mb.at)+'</span></div>';
+  if(v.mo)kv+='<div><b>'+nf(v.mo.h,0)+'% · '+nf(v.mo.t,1)+' °C</b><span>boven, gemeten '+clock(v.mo.at)+'</span></div>';
+  var nh=Math.max(c.minH-1,0);
+  kv+='<div><b>'+nf(v.ahIn,1)+' g/m³</b><span>vocht in de lucht binnen ('+v.refName+')</span></div>';
+  kv+='<div><b>'+nf(v.ahOut[Math.min(23,nh)],1)+' g/m³</b><span>buiten om '+hh(Math.min(23,nh))+(v.assumed?', aangenomen 85% vochtigheid':'')+'</span></div></div>';
+  var head,tips=[];
+  if(v.level==='goed'){
+    head='De luchtvochtigheid is goed (40 tot 60%).';
+    tips.push('Laat de ventilatie op de gewone stand staan. Kort extra ventileren is alleen nodig na koken of douchen.');
+    if(v.win)tips.push('Mocht je toch willen luchten: <b>'+win(v.win.s,v.win.n)+'</b> is de droogste tijd. Buiten is dan ongeveer '+nf(v.win.avg,1)+' g/m³ droger dan binnen.');
+  }else if(v.level==='droog'){
+    head='De lucht is droog (onder 40%).';
+    var nh2=Math.min(23,Math.max(c.minH-1,0));
+    if(v.gain[nh2]<-1)tips.push('Buiten is de lucht nu vochtiger dan binnen ('+nf(v.ahOut[nh2],1)+' tegen '+nf(v.ahIn,1)+' g/m³). Ventileren brengt dus vocht binnen. Dat kan prettig zijn. Houd de ventilatie op de gewone stand of iets hoger.');
+    else tips.push('Extra ventileren maakt het hier eerder droger dan vochtiger. Laat de ventilatie op de gewone stand en droog de was binnen als dat kan.');
+    tips.push('Een lagere temperatuur laat de relatieve vochtigheid stijgen. Elke graad lager geeft ongeveer 3 tot 4 procentpunt erbij.');
+  }else{
+    head=(v.level==='hoog'?'De luchtvochtigheid is te hoog: boven 70% neemt het risico op schimmel en condens duidelijk toe.':'De luchtvochtigheid is aan de hoge kant (60 tot 70%).');
+    if(v.win){
+      tips.push('<b>Ventileer tussen '+win(v.win.s,Math.min(v.win.n,4))+'.</b> Buiten is de lucht dan ongeveer '+nf(v.win.avg,1)+' g/m³ droger dan binnen, dus je haalt echt vocht weg.');
+      tips.push('Je hebt een warmteterugwinning: zet die in die uren op de hoogste stand. Kost nauwelijks warmte. Ramen een kwartier wijd open kost ongeveer '+(v.win.cost<0.01?'minder dan 1 cent':Math.round(v.win.cost*100)+' cent')+' aan verwarming. Dan werkt het sneller, maar dwarsventileren is genoeg.');
+    }else{
+      tips.push('Buiten is de lucht vandaag niet droger dan binnen. Ventileren haalt nu weinig vocht weg, en kan het zelfs erger maken. Houd de WTW op een hoge stand zonder ramen open te zetten.');
+      tips.push('Wat wel helpt: de verwarming een halve graad hoger (ongeveer 2 procentpunt lager), de deur van de badkamer dicht en de afzuiging aan tijdens het douchen, en de was niet binnen laten drogen.');
+    }
+  }
+  if(v.boven)tips.push('Boven is het koeler ('+nf(v.mo.t,1)+' °C) en vochtig ('+nf(v.mo.h,0)+'%). Daar slaat vocht het eerst neer op koude muren en ruiten. Ventileer boven apart en kijk achter kasten en in hoeken.');
+  if(v.worst>60)tips.push('Het dauwpunt binnen is '+nf(v.tdIn,1)+' °C. Is een oppervlak (een buitenmuur, een ruit) kouder dan dat, dan slaat er vocht op neer.');
+  if(c.minH>0&&c.minH>=22)tips.push('Het is laat. Voor vandaag zijn er geen goede ventilatie-uren meer. Kijk bij morgen.');
+  return h+'<p style="margin-top:6px"><span class="lvl '+cls+'">'+lab+'</span> '+head+'</p>'+kv
+    +'<ul class="tip">'+tips.map(function(t){return '<li>'+t+'</li>';}).join('')+'</ul>'
+    +'<h3 style="margin-top:14px">Vocht in de buitenlucht per uur</h3><p class="muted small" style="margin-top:4px">Groene balken: buiten droger dan binnen, dan helpt ventileren. De lijn is het vocht dat er nu binnen in zit. Voor andere dagen ga ik ervan uit dat het binnen gelijk blijft.</p>'
+    +'<div class="chart" id="ch-vent"></div>'+legend([['var(--good)','buiten droger (ventileren helpt)'],['var(--mid)','ongeveer gelijk'],['var(--bad)','buiten vochtiger'],['var(--ink)','binnen nu']])+'</div>';
+}
+function compute(di){
+  var day=DAYS[di]; if(!day)return null;
+  var ck=di+'|'+JSON.stringify(st)+'|'+JSON.stringify(IND); if(cache[ck])return cache[ck];
+  var hrs=day.hours.map(function(x){
+    var r=irrM(x);
+    return {h:x.h,ms:x.ms,temp:x.temp,cloud:x.cloud,rh:x.rh,el:x.el,ghi:r.ghi,poa:r.poa,pv:st.kwp*r.poa/1000*0.82};
+  });
+  var c={day:day,hrs:hrs,own:false,priceErr:null,minH:day.minH||0};
+  var pp=parsePrices(st.prices[day.key]);
+  var ex=SNAP.epex&&SNAP.epex[day.key];
+  if(pp&&pp.values){c.price=pp.values;c.src='own';}
+  else if(ex&&ex.length===24){c.price=ex.map(function(v){return v/1000*1.21+st.opslag;});c.src='epex';}
+  else{c.price=priceModel(day,hrs);c.src='model';}
+  if(pp&&pp.error)c.priceErr=pp.error;
+  c.own=(c.src==='own');
+  c.fi=c.price.map(function(p){return st.fimode==='dyn'?((p-st.opslag)/1.21-st.terugkosten):st.feedin;});
+  c.eff=hrs.map(function(h,i){return effCost(h,1,c.price[i],c.fi[i]);});
+  var sorted=c.eff.slice().sort(function(a,b){return a-b;}), t1=sorted[7], t2=sorted[15];
+  c.cls=c.eff.map(function(v){return v<=t1?0:(v<=t2?1:2);});
+  c.best=bestWin(c.eff,3,-1,c.minH); c.worst=bestWin(c.eff,3,1,c.minH);
+  c.pvKwh=hrs.reduce(function(a,h){return a+h.pv;},0);
+  var dl=hrs.filter(function(h){return h.el>0;});
+  c.cloudDay=dl.length?dl.reduce(function(a,h){return a+h.cloud;},0)/dl.length:100;
+  c.tmin=Math.min.apply(null,hrs.map(function(h){return h.temp;}));
+  c.tmax=Math.max.apply(null,hrs.map(function(h){return h.temp;}));
+  c.pmin=Math.min.apply(null,c.price);c.pmax=Math.max.apply(null,c.price);
+  c.heat=heating(c);
+  c.vent=ventAdvice(c);
+  c.appl=st.appl.map(function(a){return applBest(a,c);});
+  planAll(c);
+  cache[ck]=c;
+  if(Object.keys(cache).length>30)cache={};
+  return c;
+}
+function heating(c){
+  var H=st.area*INSUL[st.insul].v*(st.wtw?0.92:1)/1000, C=Math.min(st.ground,st.area)*60+Math.max(0,st.area-st.ground)*20;
+  var gasHeat=st.gas/(9.77*st.gaseff);
+  var cop=c.hrs.map(function(h){return copAt(h.temp);});
+  var hp=c.hrs.map(function(h,i){return effCost(h,1.2,c.price[i],c.fi[i])/cop[i];});
+  var src=hp.map(function(v){return st.heatsrc==='gas'?'gas':(st.heatsrc==='wp'?'wp':(v<=gasHeat?'wp':'gas'));});
+  var cost=hp.map(function(v,i){return src[i]==='wp'?v:gasHeat;});
+  var g=Math.min(1,st.ground/Math.max(st.area,1)), upc=st.upel?c.hrs.map(function(h,i){return effCost(h,1.2,c.price[i],c.fi[i]);}):null;
+  var gains=c.hrs.map(function(h){return 0.25+st.area*0.02*h.ghi/1000;});
+  var r={H:H,C:C,gasHeat:gasHeat,cop:cop,hp:hp,src:src,cost:cost,base:{q:0,eur:0,kwhe:0,m3:0},smart:{q:0,eur:0,kwhe:0,m3:0},qh:[],tin:[],dem:[]};
+  function acc(o,q,i){
+    var qf=upc?q*g:q, qu=q-qf;
+    o.q+=q;o.eur+=qf*cost[i]+qu*(upc?upc[i]:0);
+    if(src[i]==='wp')o.kwhe+=qf/cop[i];else o.m3+=qf/(9.77*st.gaseff);
+    o.kwhe+=qu;
+  }
+  c.hrs.forEach(function(h,i){var d0=Math.max(0,H*(st.tset-h.temp)-gains[i]);r.dem.push(d0);acc(r.base,d0,i);});
+  var cs=cost.slice().sort(function(a,b){return a-b;}), thr=cs[Math.floor(24*0.35)], tin=st.tset;
+  var nw=nowTemp(), useNow=!!nw&&c.minH>0;
+  r.useNow=useNow;r.nowT=nw?nw.t:0;r.nowAt=nw?nw.at:0;r.nowAuto=nw?nw.auto:false;
+  c.hrs.forEach(function(h,i){
+    if(useNow&&i===c.minH-1)tin=r.nowT;
+    var tgt=cost[i]<=thr?st.tset+st.band:st.tset-st.band, loss=H*(tin-h.temp);
+    var need=(tgt-tin)*C/1000+loss-gains[i], q=Math.min(st.pmax,Math.max(0,need));
+    r.tin.push(tin);r.qh.push(q);acc(r.smart,q,i);
+    tin+=(q+gains[i]-loss)*1000/C;
+  });
+  r.elec=r.qh.map(function(q,i){var qf=upc?q*g:q;return (src[i]==='wp'?qf/cop[i]:0)+(q-qf);});
+  r.upShare=upc?1-g:0;
+  r.tinEnd=tin;
+  var avg=cost.reduce(function(a,b){return a+b;},0)/24;
+  r.smartEq=r.smart.eur-(tin-st.tset)*C/1000*avg;
+  r.saving=r.base.eur-r.smartEq;
+  r.cheapWin=bestWin(cost,3,-1,c.minH);
+  r.copAvg=cop.reduce(function(a,b){return a+b;},0)/24;
+  r.breakEven=gasHeat*r.copAvg;
+  /* Houtkachel: nuttige warmte is wat de benedenverdieping nodig heeft, de rest warmt de woonkamer te ver op. */
+  r.stove=null;
+  if(st.stove){
+    var share=Math.min(1,st.ground/Math.max(st.area,1)), len=Math.max(1,Math.round(st.stoveh)), useful=[], bs=-1, bv=-1, i2, k2;
+    for(i2=0;i2<24;i2++)useful.push(Math.min(st.stovekw,share*r.dem[i2]));
+    for(var s2=Math.max(15,Math.min(c.minH,24-len));s2+len<=24;s2++){
+      var sv2=0;for(k2=0;k2<len;k2++)sv2+=useful[s2+k2]*Math.max(0,cost[s2+k2]-st.woodcost);
+      if(sv2>bv){bv=sv2;bs=s2;}
+    }
+    var uk=0,gk=0,ek=0;
+    for(k2=0;k2<len;k2++){var u=useful[bs+k2];uk+=u;if(src[bs+k2]==='wp')ek+=u/cop[bs+k2];else gk+=u/(9.77*st.gaseff);}
+    r.stove={s:bs,len:len,saving:bv,useful:uk,kwhe:ek,m3:gk,share:share};
+  }
+  return r;
+}
+function applBest(a,c){
+  var n=Math.max(1,Math.ceil(a.dur)), kh=a.kwh/n;
+  function costAt(s){var t=0;for(var k=0;k<n;k++){var i=s+k;if(i>23)break;t+=kh*effCost(c.hrs[i],kh,c.price[i],c.fi[i]);}return t;}
+  var costs=[],valid=[];
+  for(var s=0;s<24;s++){
+    if(s>=a.from&&s+n<=a.to&&s>=c.minH){var v=costAt(s);costs.push(v);valid.push(v);}else costs.push(null);
+  }
+  var o={a:a,n:n,costs:costs,typ:costAt(Math.max(0,Math.min(23,Math.round(a.typ))))};
+  if(valid.length){
+    o.min=Math.min.apply(null,valid);o.max=Math.max.apply(null,valid);o.avg=valid.reduce(function(x,y){return x+y;},0)/valid.length;
+    o.s=costs.indexOf(o.min);
+    var sv=valid.slice().sort(function(x,y){return x-y;});
+    o.t1=sv[Math.floor((sv.length-1)/3)];o.t2=sv[Math.floor((sv.length-1)*2/3)];
+  }
+  return o;
+}
+
+/* Verdeelt de apparaten zo over de dag dat basisverbruik, warmtepomp en apparaten samen onder de limiet van de aansluiting blijven.
+   Grootste apparaat eerst. Zonnestroom telt niet mee, want bij wisselende bewolking kan die wegvallen. */
+function planAll(c){
+  var limit=st.conn*0.8, load=c.hrs.map(function(h,i){return st.base+c.heat.elec[i];});
+  var idx=c.appl.map(function(r,i){return i;}).sort(function(x,y){return c.appl[y].a.kw-c.appl[x].a.kw;});
+  idx.forEach(function(i){
+    var r=c.appl[i],a=r.a,k;
+    r.plan=null;
+    if(r.min===undefined)return;
+    var bestS=-1,bestV=null;
+    for(var s=0;s<24;s++){
+      if(r.costs[s]===null)continue;
+      var ok=true;
+      for(k=0;k<r.n&&ok;k++){if(load[s+k]+a.kw>limit)ok=false;}
+      if(ok&&(bestV===null||r.costs[s]<bestV)){bestV=r.costs[s];bestS=s;}
+    }
+    var over=false;
+    if(bestS<0){bestS=r.s;bestV=r.min;over=true;}
+    r.plan={s:bestS,cost:bestV,shifted:bestS!==r.s,over:over,limit:limit};
+    for(k=0;k<r.n;k++){if(bestS+k<24)load[bestS+k]+=a.kw;}
+  });
+  c.load=load;c.limit=limit;
+}
+
+/* ---------- Grafieken (SVG, getekend op de breedte van het scherm) ---------- */
+function chart(el,cfg){
+  var w=Math.max(280,el.clientWidth||340),h=cfg.h||190,ml=46,mr=cfg.R?42:10,mt=10,mb=22,pw=w-ml-mr,ph=h-mt-mb;
+  function Y(v,sc){return mt+ph-(v-sc.min)/(sc.max-sc.min)*ph;}
+  function X(i){return ml+(i+0.5)*pw/24;}
+  function XF(f){return ml+f*pw/24;}
+  var s='<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" role="img" aria-label="'+esc(cfg.label)+'">';
+  cfg.L.ticks.forEach(function(t){var y=Y(t,cfg.L);s+='<line class="grid" x1="'+ml+'" x2="'+(w-mr)+'" y1="'+y+'" y2="'+y+'"/><text class="tick" x="'+(ml-6)+'" y="'+(y+4)+'" text-anchor="end">'+cfg.L.fmt(t)+'</text>';});
+  if(cfg.R)cfg.R.ticks.forEach(function(t){var y=Y(t,cfg.R);s+='<text class="tick" x="'+(w-mr+6)+'" y="'+(y+4)+'">'+cfg.R.fmt(t)+'</text>';});
+  for(var i=0;i<24;i+=3)s+='<text class="tick" x="'+XF(i)+'" y="'+(h-6)+'" text-anchor="middle">'+pad(i)+'</text>';
+  if(cfg.band){var y1=Y(cfg.band[1],cfg.L),y2=Y(cfg.band[0],cfg.L);s+='<rect x="'+ml+'" y="'+y1+'" width="'+pw+'" height="'+(y2-y1)+'" style="fill:var(--good);opacity:.13"/>';}
+  cfg.series.forEach(function(se){
+    var sc=se.axis==='R'?cfg.R:cfg.L, bw=pw/24*0.72, k;
+    if(se.type==='bar'){
+      for(k=0;k<24;k++){var v=se.v[k];if(v===null||v===undefined)continue;var y0=Y(Math.max(sc.min,0),sc),y=Y(v,sc);
+        s+='<rect x="'+(X(k)-bw/2)+'" y="'+Math.min(y,y0)+'" width="'+bw+'" height="'+Math.max(1,Math.abs(y0-y))+'" rx="2" style="fill:'+(se.color(k))+(se.op?';opacity:'+se.op:'')+'"/>';}
+    }else if(se.type==='line'||se.type==='area'){
+      var pts=se.v.map(function(v,k){return X(k).toFixed(1)+','+Y(v,sc).toFixed(1);});
+      if(se.type==='area'){var yb=Y(Math.max(sc.min,0),sc);s+='<polygon points="'+X(0)+','+yb+' '+pts.join(' ')+' '+X(23)+','+yb+'" style="fill:'+se.color+';opacity:.28"/>';}
+      s+='<polyline points="'+pts.join(' ')+'" fill="none" style="stroke:'+se.color+';stroke-width:'+(se.w||2)+(se.dash?';stroke-dasharray:'+se.dash:'')+'" stroke-linejoin="round"/>';
+    }else if(se.type==='hline'){
+      var yy=Y(se.v,sc);s+='<line x1="'+ml+'" x2="'+(w-mr)+'" y1="'+yy+'" y2="'+yy+'" style="stroke:'+se.color+';stroke-width:2;stroke-dasharray:6 4"/>';
+    }
+  });
+  (cfg.marks||[]).forEach(function(m){
+    var x=XF(m.f);s+='<line x1="'+x+'" x2="'+x+'" y1="'+mt+'" y2="'+(mt+ph)+'" style="stroke:var(--ink);stroke-width:1;stroke-dasharray:3 3"/>';
+    var anchor=x>w-110?'end':'start', tx=anchor==='end'?x-4:x+4;
+    s+='<text class="tick" style="fill:var(--ink)" x="'+tx+'" y="'+(mt+11)+'" text-anchor="'+anchor+'">'+esc(m.t)+'</text>';
+  });
+  s+='<g class="cur" visibility="hidden"><line x1="0" x2="0" y1="'+mt+'" y2="'+(mt+ph)+'" style="stroke:var(--ink);stroke-width:1.5"/><circle cx="0" cy="'+(mt+ph)+'" r="6" style="fill:var(--ink);stroke:var(--panel);stroke-width:2"/></g>';
+  el.innerHTML=s+'</svg><div class="read" aria-live="polite"></div>';
+  var svg=el.querySelector('svg'),rd=el.querySelector('.read'),g=svg.querySelector('.cur'),ln=g.firstChild,ci=g.lastChild;
+  function show(k){
+    if(k===null||k===undefined){g.setAttribute('visibility','hidden');return;}
+    var x=X(k);ln.setAttribute('x1',x);ln.setAttribute('x2',x);ci.setAttribute('cx',x);g.setAttribute('visibility','visible');
+    var h='<b>'+hh(k)+'</b>';
+    cfg.series.forEach(function(se){
+      if(!se.n)return;
+      var v=se.type==='hline'?se.v:se.v[k];
+      if(v===null||v===undefined)return;
+      var col=typeof se.color==='function'?se.color(k):se.color;
+      h+='<span><i style="background:'+col+'"></i>'+se.n+' <em>'+(se.f?se.f(v):nf(v,1))+'</em></span>';
+    });
+    rd.innerHTML=h;
+  }
+  function at(ev){
+    var r=svg.getBoundingClientRect(),fx=(ev.clientX-r.left)*(w/Math.max(1,r.width));
+    setCur(Math.max(0,Math.min(23,Math.floor((fx-ml)/(pw/24)))));
+  }
+  var down=false;
+  svg.addEventListener('pointerdown',function(ev){down=true;try{svg.setPointerCapture(ev.pointerId);}catch(e){}at(ev);});
+  svg.addEventListener('pointermove',function(ev){if(down||ev.pointerType==='mouse')at(ev);});
+  svg.addEventListener('pointerup',function(){down=false;});
+  svg.addEventListener('pointercancel',function(){down=false;});
+  svg.setAttribute('tabindex','0');
+  svg.addEventListener('keydown',function(ev){
+    var k=curK===null?12:curK;
+    if(ev.key==='ArrowRight'){setCur(Math.min(23,k+1));ev.preventDefault();}
+    else if(ev.key==='ArrowLeft'){setCur(Math.max(0,k-1));ev.preventDefault();}
+  });
+  CH[el.id]={el:el,show:show};
+  show(curK===null?defaultK():curK);
+}
+var CH={},curK=null,curTouched=false;
+function defaultK(){return localOf(Date.now()).h;}
+function setCur(k){
+  curK=k;curTouched=true;
+  Object.keys(CH).forEach(function(id){var c=CH[id];if(!c.el.isConnected){delete CH[id];return;}c.show(k);});
+}
+function niceTicks(min,max,n){
+  var span=max-min,step=Math.pow(10,Math.floor(Math.log10(span/n))),m=span/n/step;
+  step*=m>5?10:(m>2?5:(m>1?2:1));
+  var a=Math.floor(min/step)*step,b=Math.ceil(max/step)*step,t=[];
+  for(var v=a;v<=b+1e-9;v+=step)t.push(Math.round(v/step)*step);
+  return {min:a,max:b,ticks:t};
+}
+function legend(items){return '<div class="legend">'+items.map(function(i){return '<span><i style="background:'+i[0]+'"></i>'+i[1]+'</span>';}).join('')+'</div>';}
+function stripHTML(cls,best,len,off,minH){
+  var s='<div class="strip">';
+  for(var i=0;i<24;i++){
+    var isBest=best!==null&&i>=best&&i<best+len;
+    var c=(off&&off[i])?'off':'c'+cls[i];
+    s+='<div class="cell '+c+(isBest?' best':'')+(minH&&i<minH?' past':'')+'">'+(i%3===0?pad(i):'')+'</div>';
+  }
+  return s+'</div>';
+}
+
+/* ---------- Weergave: overzicht ---------- */
+function renderOverview(){
+  var c=compute(ui.day),el=$('p-overzicht');
+  if(!c){el.innerHTML='<div class="card">Geen volledige dag in de verwachting.</div>';return;}
+  var d=c.day,b=c.best,wv=c.worst,h=c.heat;
+  var sunMax=c.hrs.reduce(function(a,x){return Math.max(a,x.pv);},0);
+  var ratio=c.pvKwh/Math.max(0.1,st.kwp*1.6);
+  var fiMin=Math.min.apply(null,c.fi), fiMax=Math.max.apply(null,c.fi), nNeg=c.fi.filter(function(v){return v<0;}).length;
+  var html='';
+  html+='<div class="card hero"><div class="lbl">Beste moment voor stroom op '+esc(d.name)+(c.minH>0?', vanaf nu':'')+'</div>'
+    +'<div class="big">'+win(b.s,3)+'</div>'
+    +'<p class="muted" style="margin-top:4px">Gemiddeld '+eur(b.avg)+' per kWh voor een apparaat van 1 kW, na aftrek van zonnestroom die je zelf gebruikt.'+(b.avg<0?' Een negatief bedrag betekent dat je in die uren een betaling voor terugleveren voorkomt.':'')+' Duurste uren: '+win(wv.s,3)+' ('+eur(wv.avg)+').</p></div>';
+  html+='<div class="stats">'
+    +stat('Hoogste zonnestand',clock(d.noon),nf(d.maxEl,0)+'° boven de horizon')
+    +stat('Zon op / onder',clock(d.rise)+' / '+clock(d.set),'daglicht '+nf((d.set-d.rise)/3600000,1)+' uur')
+    +stat('Bewolking overdag',nf(c.cloudDay,0)+'%',c.cloudDay<35?'overwegend zonnig':(c.cloudDay<70?'wisselend':'grijs'))
+    +stat('Zonnepanelen',nf(c.pvKwh,1)+' kWh','piek '+nf(sunMax,1)+' kW van '+nf(st.kwp,1)+' kWp')
+    +(function(){var b=measRec('ben'),o=measRec('bov');if(!b||Date.now()-b.at>(b.auto?3:8)*3600000)return '';return stat('Binnen nu, beneden',nf(b.t,1)+' °C',(b.h?nf(b.h,0)+'% vochtigheid':'')+(o&&Date.now()-o.at<(o.auto?3:8)*3600000?(b.h?', ':'')+'boven '+nf(o.t,1)+' °C':'')+' · '+clock(b.at));})()
+    +(function(){if(OUT&&typeof OUT.t==='number'&&typeof OUT.at==='number'&&Date.now()-OUT.at<3*3600000){var fx=c.day.hours[Math.min(23,Math.max(0,localOf(OUT.at).h))];return stat('Buiten nu, '+esc(OUT.name||'meetstation'),nf(OUT.t,0)+' °C','gemeten '+clock(OUT.at)+(c.minH>0&&fx?', verwachting '+nf(fx.temp,0)+' °C':''));}return '';})()
+    +stat('Buitentemperatuur',nf(c.tmin,0)+' tot '+nf(c.tmax,0)+' °C','binnen ± '+nf(st.tset,1)+' °C')
+    +stat('Stroomprijs',eur(c.pmin)+' tot '+eur(c.pmax),(c.src==='own'?'eigen prijzen':(c.src==='epex'?'EPEX day-ahead':'indicatief profiel')))
+    +stat('Teruglevering',eur(fiMin)+' tot '+eur(fiMax),(st.fimode==='dyn'?'volgt de beurs':'vast bedrag')+(nNeg?', '+nNeg+' uur negatief':''))
+    +'</div>';
+  html+='<div class="card"><h2>Waar zit het voordeel per uur?</h2><p class="muted small">Groen is het goedkoopst om stroom te gebruiken, rood het duurst. Zon op je eigen dak telt mee.</p>'
+    +stripHTML(c.cls,b.s,3,null,c.minH)
+    +'<div class="legend"><span><i style="background:var(--good-bg)"></i>goedkoop</span><span><i style="background:var(--mid-bg)"></i>gemiddeld</span><span><i style="background:var(--bad-bg)"></i>duur</span><span><i style="box-shadow:0 0 0 2px var(--ink);background:transparent"></i>beste 3 uur</span></div></div>';
+  html+='<div class="card"><h2>Stroomprijs per uur'+(c.src==='model'?'<span class="badge">indicatief</span>':'<span class="badge ok">'+(c.src==='epex'?'EPEX day-ahead':'eigen prijzen')+'</span>')+'</h2>'
+    +(c.src==='epex'?'<p class="muted small" style="margin-top:6px">Beursprijs voor Nederland (uurgemiddelde van de kwartierprijzen, opgehaald '+SNAP.epexStamp+') maal 1,21 btw, plus € '+nf(st.opslag,2)+' belasting en opslag. Je eigen leveranciersprijs kan iets afwijken.</p>':'')
+    +(c.src==='model'?'<p class="muted small" style="margin-top:6px">Voor deze dag zijn de beursprijzen nog niet bekend. Dit is een typisch verloop van een dynamisch contract, aangepast aan bewolking en weekend. De EPEX-prijzen voor de volgende dag verschijnen rond 13:00.</p>':'')
+    +(c.priceErr?'<p class="err">'+esc(c.priceErr)+'</p>':'')
+    +'<div class="chart" id="ch-price"></div>'+legend([['var(--good)','goedkoopste derde'],['var(--mid)','midden'],['var(--bad)','duurste derde'],['var(--sun)','terugleverprijs']])+'</div>';
+  html+='<div class="card"><h2>Zon en bewolking</h2><div class="chart" id="ch-sun"></div>'
+    +legend([['var(--sun)','opbrengst zonnepanelen (kW)'],['var(--cloud)','bewolking (%)']])+'</div>';
+  var tips=[];
+  if(c.vent&&!c.vent.none&&(c.vent.level==='hoog'||c.vent.level==='verhoogd'))tips.unshift(c.vent.win?'De lucht is te vochtig. Ventileer tussen <b>'+win(c.vent.win.s,Math.min(c.vent.win.n,4))+'</b>, dan is het buiten droger dan binnen.':'De lucht binnen is vochtig, maar buiten is het niet droger. Zie het blok Ventileren voor wat dan helpt.');
+  tips.push('Plan afwas, was en droger tussen <b>'+win(b.s,3)+'</b>. Dat is de goedkoopste combinatie van prijs en eigen zonnestroom.');
+  tips.push('Vermijd <b>'+win(wv.s,3)+'</b> voor grote verbruikers. Hier zit de piek van de dag.');
+  tips.push('Verwarming: laat de vloer extra opwarmen in <b>'+win(h.cheapWin.s,3)+'</b>. Een vloer koelt langzaam af, dus je merkt het niet als hij in de dure uren uit staat. Verwachte besparing ongeveer '+eur(Math.max(0,h.saving))+' op deze dag.');
+  if(h.gasHeat>h.hp.reduce(function(a,b){return a+b;},0)/24)tips.push('Een kWh warmte via de warmtepomp kost nu gemiddeld '+nf(h.gasHeat/(h.hp.reduce(function(a,b){return a+b;},0)/24),1)+' keer minder dan via gas.');
+  else tips.push('Gas is vandaag voordeliger dan de warmtepomp voor het verwarmen. Controleer je COP-instelling bij Instellingen.');
+  if(h.stove&&h.stove.saving>0.05)tips.push('Houtkachel: steek hem aan rond <b>'+hh(h.stove.s)+'</b>, dat scheelt ongeveer '+eur(h.stove.saving)+' aan warmte. Zet de thermostaat zolang lager, hij zit in dezelfde kamer.');
+  var negH=[];
+  c.hrs.forEach(function(x,i){if(c.fi[i]<0&&x.pv>st.base+0.1)negH.push(i);});
+  if(negH.length)tips.splice(1,0,'Rond <b>'+hh(negH[0])+'–'+hh(negH[negH.length-1]+1)+'</b> kost terugleveren geld (tot '+eur(Math.abs(fiMin))+' per kWh). Gebruik je zonnestroom dan zelf, bijvoorbeeld voor de vaatwasser, de was of de vloerverwarming, of laat de omvormer afknijpen.');
+  if(c.appl.some(function(r){return r.plan&&r.plan.shifted;}))tips.push('Niet alles past tegelijk binnen je aansluiting ('+nf(c.limit,1)+' kW bruikbaar). Op het tabblad Apparaten staat een verdeling die onder die grens blijft.');
+  html+=ventHTML(c);
+  html+='<div class="card"><h2>Wat nu te doen</h2><ul class="tip">'+tips.map(function(t){return '<li>'+t+'</li>';}).join('')+'</ul></div>';
+  el.innerHTML=html;
+  var lo=Math.min(0,c.pmin,fiMin), pr=niceTicks(lo*1.05,Math.max(c.pmax,fiMax)*1.05,4);
+  chart($('ch-price'),{label:'Stroomprijs en terugleverprijs per uur',L:{min:pr.min,max:pr.max,ticks:pr.ticks,fmt:function(v){return nf(v,2);}},
+    series:[{type:'bar',n:'Prijs',f:function(v){return eur(v,3)+'/kWh';},v:c.price,color:function(k){return c.cls[k]===0?'var(--good)':(c.cls[k]===1?'var(--mid)':'var(--bad)');}},
+            {type:'line',n:'Terugleveren',f:function(v){return eur(v,3)+'/kWh';},v:c.fi,color:'var(--sun)',w:2.5}]});
+  var pm=niceTicks(0,Math.max(1,sunMax*1.15),4);
+  if(c.vent&&!c.vent.none&&$('ch-vent')){
+    var vm=niceTicks(0,Math.max(c.vent.ahIn,Math.max.apply(null,c.vent.ahOut))*1.15,4);
+    chart($('ch-vent'),{label:'Vocht in de buitenlucht per uur',L:{min:vm.min,max:vm.max,ticks:vm.ticks,fmt:function(v){return nf(v,0);}},
+      series:[{type:'bar',n:'Buiten',f:function(v){return nf(v,1)+' g/m³';},v:c.vent.ahOut,color:function(k){return c.vent.gain[k]>=1?'var(--good)':(c.vent.gain[k]>-1?'var(--mid)':'var(--bad)');}},
+              {type:'hline',n:'Binnen nu',f:function(v){return nf(v,1)+' g/m³';},v:c.vent.ahIn,color:'var(--ink)'}]});
+  }
+  chart($('ch-sun'),{label:'Zonopbrengst en bewolking',L:{min:pm.min,max:pm.max,ticks:pm.ticks,fmt:function(v){return nf(v,1);}},
+    R:{min:0,max:100,ticks:[0,50,100],fmt:function(v){return v+'%';}},
+    series:[{type:'bar',axis:'R',n:'Bewolking',f:function(v){return nf(v,0)+'%';},v:c.hrs.map(function(x){return x.cloud;}),color:function(){return 'var(--cloud)';},op:.55},
+            {type:'area',n:'Zonnepanelen',f:function(v){return nf(v,2)+' kW';},v:c.hrs.map(function(x){return x.pv;}),color:'var(--sun)',w:2.5}],
+    marks:[{f:(d.noon-(d.hours[0].ms-1800000))/3600000,t:'hoogste stand '+clock(d.noon)}]});
+}
+function stat(l,v,s){return '<div class="stat"><div class="lbl">'+l+'</div><div class="val">'+v+'</div><div class="sub">'+s+'</div></div>';}
+
+/* ---------- Weergave: apparaten ---------- */
+function renderAppliances(){
+  var c=compute(ui.day),el=$('p-apparaten');
+  if(!c){el.innerHTML='';return;}
+  var html='<div class="card"><h2>Wanneer zet je ze aan?</h2><p class="muted small" style="margin-top:6px">Kosten per beurt voor '+esc(c.day.name)+', inclusief je eigen zonnestroom. De verbruiken en tijden pas je aan bij Instellingen.</p></div>';
+  var shL=st.showermin*st.showerlpm, shKwh=shL*1.163*28/1000, shM3=shKwh/(9.77*0.88), shCost=shM3*st.gas;
+  var shEco=st.showerlpm>6?shCost-st.showermin*6*1.163*28/1000/(9.77*0.88)*st.gas:0;
+  html+='<div class="card"><h3>Douchen en warm water</h3>'
+    +'<p style="margin-top:6px">Je kunt douchen wanneer je wilt. Je warme water komt van gas en gas heeft geen uurprijs, dus het tijdstip maakt niets uit voor de kosten.</p>'
+    +'<div class="kv"><div><b>'+eur(shCost)+'</b><span>per douche van '+nf(st.showermin,0)+' minuten ('+nf(shL,0)+' liter)</span></div>'
+    +'<div><b>'+nf(shM3,2)+' m³</b><span>gas per douche</span></div>'
+    +'<div><b class="save">'+eur(shCost/Math.max(1,st.showermin))+'</b><span>besparing per minuut korter</span></div>'
+    +(shEco>0.01?'<div><b class="save">'+eur(shEco)+'</b><span>met een zuinige kop van 6 l/min</span></div>':'')+'</div>'
+    +'<p class="muted small" style="margin-top:8px">Rekenen doe ik met een opwarming van 10 naar 38 °C en 88% ketelrendement. Een douchewarmtewisselaar in de afvoer haalt een groot deel van de warmte terug. De Quooker gebruikt in stand-by weinig en hoeft niet gestuurd te worden.</p></div>';
+  var totalSave=0;
+  c.appl.forEach(function(r){
+    var a=r.a;
+    html+='<div class="card appl"><div class="row"><h3>'+esc(a.name)+'</h3><span class="muted small">'+nf(a.kwh,1)+' kWh · '+nf(a.dur,1)+' uur · '+nf(a.kwh/a.dur,2)+' kW gemiddeld</span></div>';
+    if(r.min===undefined){html+=(c.minH>0?'<p class="muted">Er is vandaag geen startmoment meer binnen '+hh(a.from)+' en '+hh(a.to)+'. Kijk bij de volgende dag.</p></div>':'<p class="muted">Geen geschikt startmoment binnen '+hh(a.from)+' en '+hh(a.to)+'. Maak het venster ruimer bij Instellingen.</p></div>');return;}
+    var P=r.plan||{s:r.s,cost:r.min,shifted:false,over:false,limit:c.limit};
+    var save=Math.max(0,r.typ-P.cost);totalSave+=save;
+    html+='<div class="when">Start om '+hh(P.s)+'</div>'
+      +'<div class="kv"><div><b>'+eur(P.cost)+'</b><span>'+(P.shifted?'gekozen moment':'beste moment')+'</span></div><div><b>'+eur(r.typ)+'</b><span>om '+hh(Math.round(a.typ))+' (gebruikelijk)</span></div><div><b>'+eur(r.max)+'</b><span>duurste moment</span></div><div><b class="save">'+eur(save)+'</b><span>besparing per beurt</span></div></div>';
+    var cls=r.costs.map(function(v){return v===null?0:(v<=r.t1?0:(v<=r.t2?1:2));}),off=r.costs.map(function(v){return v===null;});
+    html+=stripHTML(cls,P.s,1,off,c.minH)
+      +(P.shifted?'<p class="muted small">Zonder limiet was '+hh(r.s)+' het goedkoopst ('+eur(r.min)+'). Dan zit je met de andere apparaten boven de '+nf(P.limit,1)+' kW die je aansluiting aankan.</p>':'')
+      +(P.over?'<p class="err">Past in dit tijdvenster nergens binnen de limiet. Maak het venster ruimer of laat een ander apparaat vallen.</p>':'')
+      +'<p class="muted small">Gekleurd: mogelijke starttijden tussen '+hh(a.from)+' en '+hh(a.to)+'. Omlijnd is de gekozen start.</p></div>';
+  });
+  html+='<div class="card"><h2>Gelijktijdig vermogen</h2><p class="muted small" style="margin-top:6px">Basisverbruik, warmtepomp en de geplande apparaten samen, per uur in kW. De rode lijn is wat je aansluiting aankan ('+nf(st.conn,1)+' kW met 20% marge: '+nf(c.limit,1)+' kW). Zonnestroom reken ik niet mee, want die kan bij wolken wegvallen.</p><div class="chart" id="ch-load"></div>'
+    +legend([['var(--accent)','binnen de limiet'],['var(--bad)','boven de limiet']])+'</div>';
+  html+='<div class="card"><h3>Samen</h3><p style="margin-top:6px">Als je alle vier volgens deze verdeling start, scheelt dat ongeveer <b class="save">'+eur(totalSave)+'</b> per dag ten opzichte van je gebruikelijke tijden.</p>'
+    +'<p class="muted small" style="margin-top:6px">Tip: start de droger pas als de wasmachine klaar is en laat de vaatwasser de zonuren pakken met de startvertraging op het apparaat.</p></div>';
+  el.innerHTML=html;
+  var lt=niceTicks(0,Math.max(c.limit,Math.max.apply(null,c.load))*1.1,4);
+  chart($('ch-load'),{label:'Gelijktijdig vermogen',L:{min:lt.min,max:lt.max,ticks:lt.ticks,fmt:function(v){return nf(v,Math.round(v)===v?0:1);}},
+    series:[{type:'bar',n:'Vermogen',f:function(v){return nf(v,1)+' kW';},v:c.load,color:function(k){return c.load[k]>c.limit?'var(--bad)':'var(--accent)';}},{type:'hline',n:'Limiet',f:function(v){return nf(v,1)+' kW';},v:c.limit,color:'var(--bad)'}]});
+}
+
+/* ---------- Weergave: verwarming ---------- */
+function renderHeating(){
+  var c=compute(ui.day),el=$('p-verwarming');
+  if(!c){el.innerHTML='';return;}
+  var h=c.heat, d=c.day, srcName=st.heatsrc==='gas'?'gasketel':(st.heatsrc==='wp'?'warmtepomp':'hybride');
+  var mixWp=h.src.filter(function(s){return s==='wp';}).length;
+  var html='';
+  html+='<div class="card hero"><div class="lbl">Extra opwarmen in</div><div class="big">'+win(h.cheapWin.s,3)+'</div>'
+    +'<p class="muted" style="margin-top:4px">Dit zijn de goedkoopste uren voor warmte op '+esc(d.name)+' ('+eur(h.cheapWin.avg,3)+' per kWh warmte, inclusief je eigen zonnestroom). Laat de vloer dan een halve graad oplopen en sla de duurste uren over.</p></div>';
+  html+='<div class="stats">'
+    +stat('Warmtevraag',nf(h.smart.q,0)+' kWh','bij '+nf(st.tset,1)+' °C, '+INSUL[st.insul].n.split(' (')[0].toLowerCase()+' geïsoleerd')
+    +stat('Kosten, vast stoken',eur(h.base.eur),'altijd precies '+nf(st.tset,1)+' °C')
+    +stat('Kosten, slim stoken',eur(h.smartEq),'besparing ± '+eur(Math.max(0,h.saving)))
+    +stat('Verbruik slim',h.smart.kwhe>0?nf(h.smart.kwhe,1)+' kWh stroom':'geen stroom',h.smart.m3>0?nf(h.smart.m3,1)+' m³ gas':'geen gas')
+    +'</div>';
+  html+='<div class="card"><h2>Binnen- en buitentemperatuur</h2><p class="muted small" style="margin-top:6px">Berekend voor '+nf(st.area,0)+' m² met een vloer die '+nf(h.C/1000,1)+' kWh per graad opslaat. De groene band is het bereik waarin de temperatuur blijft.</p><div class="chart" id="ch-temp"></div>'
+    +legend([['var(--out)','buiten'],['var(--in)','binnen (slim stoken)'],['var(--good)','gewenst bereik']])+'</div>';
+  html+='<div class="card"><h2>Wat kost warmte per uur?</h2><p class="muted small" style="margin-top:6px">Kosten per kWh warmte. De warmtepomp wordt goedkoper als de zon schijnt of de stroomprijs laag is. De balken tonen wanneer de vloerverwarming volgens het plan aan staat.</p><div class="chart" id="ch-cost"></div>'
+    +legend([['var(--accent)','warmtepomp (€ per kWh warmte)'],['var(--bad)','gas (€ per kWh warmte)'],['var(--sun-soft)','verwarmingsvermogen (kW)']])+'</div>';
+  var tips=[];
+  var sv=h.stove;
+  if(sv){
+    html+='<div class="card"><h2>Houtkachel</h2>'
+      +'<p style="margin-top:6px">Steek hem aan rond <b>'+hh(sv.s)+'</b> en laat hem branden tot ongeveer '+hh(Math.min(24,sv.s+sv.len))+'. Dat is de beste combinatie van dure warmte en een grote warmtevraag in de avond.</p>'
+      +'<div class="kv"><div><b>'+eur(sv.saving)+'</b><span>besparing vandaag'+(st.woodcost>0?', na houtkosten':', gratis hout')+'</span></div>'
+      +'<div><b>'+nf(sv.useful,1)+' kWh</b><span>nuttige warmte voor het huis</span></div>'
+      +'<div><b>'+(sv.m3>0.005?nf(sv.m3,2)+' m³ gas':nf(sv.kwhe,1)+' kWh stroom')+'</b><span>die je daarmee uitspaart</span></div></div>'
+      +'<p class="muted small" style="margin-top:8px">De kachel levert in die tijd ongeveer '+nf(st.stovekw*sv.len,0)+' kWh, maar je huis kan er vandaag maar '+nf(sv.useful,1)+' kWh van gebruiken: alleen de benedenverdieping, dat is '+nf(sv.share*100,0)+'% van de warmtevraag. De rest warmt vooral de woonkamer te ver op. Het voordeel zit dus vooral in het comfort, niet in de rekening.</p>'
+      +'<p class="muted small" style="margin-top:8px">De thermostaat zit in dezelfde kamer. Is die warm, dan stopt de verwarming voor het hele huis. Zet de thermostaat lager zolang de kachel brandt. Dit geldt voor een gesloten kachel. Een open haard zonder deur verliest het meeste via de schoorsteen en trekt warme lucht uit je huis.</p>'
+      +'<p class="muted small" style="margin-top:8px">Veiligheid: kamerdicht toestel met luchttoevoer van buiten, een CO-melder en de afzuigkap uit. Niet stoken bij Stookalert.</p></div>';
+  }
+  if(h.useNow)tips.push('Beneden is nu <b>'+nf(h.nowT,1)+' °C</b> gemeten ('+(h.nowAuto?'sensor':'ingevuld')+' '+clock(h.nowAt)+'). De binnenlijn start daar'+(h.nowT>st.tset+st.band?'. Dat is warmer dan gewenst, dus de vloerverwarming blijft uit tot het rond '+nf(st.tset,1)+' °C is. Staat de zon op de sensor of brandt de houtkachel, dan kan de meting hoger zijn dan de rest van de woonkamer.':'.'));
+  tips.push('Bron: <b>'+srcName+'</b>'+(st.heatsrc==='hybride'?', vandaag '+mixWp+' van de 24 uur op stroom':'')+'. Gemiddelde COP van de warmtepomp ongeveer '+nf(h.copAvg,1)+' bij '+nf(st.supply,0)+' °C aanvoer.');
+  if(SNAP.ttf)tips.push('Gas: de groothandelsprijs (TTF) was '+nf(SNAP.ttf.v,0)+' €/MWh op '+SNAP.ttf.d+'. Voor de berekening gebruik ik € '+nf(st.gas,2)+' per m³, dat is het gemiddelde consumententarief. Pas dit aan bij Instellingen als jouw contract afwijkt.');
+  tips.push('Gas wordt pas goedkoper dan de warmtepomp als stroom meer kost dan ongeveer <b>'+eur(h.breakEven)+'</b> per kWh. Bij het huidige prijsverloop gebeurt dat '+(c.pmax>h.breakEven?'in de piek wel':'niet')+'.');
+  if(h.upShare>0)tips.push('Boven verwarm je elektrisch met panelen: dat kost <b>'+nf(1/Math.max(0.1,h.copAvg),1)+' keer</b> zoveel per kWh warmte als de warmtepomp. Zet de panelen in slaapkamers en ongebruikte kamers een paar graden lager en laat ze alleen in de goedkope uren opwarmen. Ongeveer '+nf(h.upShare*100,0)+'% van de warmtevraag valt hierop.');
+  tips.push('Houd de aanvoertemperatuur van de vloerverwarming laag ('+nf(st.supply,0)+' °C). Elke graad lager geeft een hogere COP.');
+  tips.push('Bij zonuren in de middag krijg je gratis warmte door de ramen. Zet de thermostaat dan niet hoger, het plan houdt daar al rekening mee.');
+  html+='<div class="card"><h2>Advies</h2><ul class="tip">'+tips.map(function(t){return '<li>'+t+'</li>';}).join('')+'</ul>'
+    +'<p class="muted small" style="margin-top:10px">Dit is een rekenmodel met je isolatieniveau en een gemiddelde vloermassa. Zie het als richting, niet als meting.</p></div>';
+  el.innerHTML=html;
+  var ts=h.tin.concat(c.hrs.map(function(x){return x.temp;}));
+  var tk=niceTicks(Math.min.apply(null,ts)-0.5,Math.max.apply(null,ts)+0.5,4);
+  chart($('ch-temp'),{label:'Binnen en buiten temperatuur',L:{min:tk.min,max:tk.max,ticks:tk.ticks,fmt:function(v){return nf(v,0)+'°';}},
+    band:[st.tset-st.band,st.tset+st.band],
+    series:[{type:'line',n:'Buiten',f:function(v){return nf(v,1)+' °C';},v:c.hrs.map(function(x){return x.temp;}),color:'var(--out)',w:2.5},{type:'line',n:'Binnen',f:function(v){return nf(v,1)+' °C';},v:h.tin,color:'var(--in)',w:2.5}]});
+  var allc=h.hp.concat([h.gasHeat]);
+  var ck=niceTicks(0,Math.max.apply(null,allc)*1.1,4);
+  chart($('ch-cost'),{label:'Kosten van warmte per uur',L:{min:ck.min,max:ck.max,ticks:ck.ticks,fmt:function(v){return nf(v,2);}},
+    R:{min:0,max:Math.max(2,st.pmax),ticks:[0,Math.max(2,st.pmax)],fmt:function(v){return nf(v,0)+' kW';}},
+    series:[{type:'bar',axis:'R',n:'Verwarming',f:function(v){return nf(v,1)+' kW';},v:h.qh,color:function(){return 'var(--sun-soft)';},op:.9},
+            {type:'line',n:'Warmtepomp',f:function(v){return eur(v,3)+'/kWh';},v:h.hp,color:'var(--accent)',w:2.5},{type:'hline',n:'Gas',f:function(v){return eur(v,3)+'/kWh';},v:h.gasHeat,color:'var(--bad)'}]});
+}
+
+/* ---------- Weergave: instellingen ---------- */
+function getPath(o,p){return p.split('.').reduce(function(a,k){return a===undefined?a:a[k];},o);}
+function setPath(o,p,v){var ks=p.split('.');for(var i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;}
+function num(path,label,o){
+  o=o||{};
+  return '<label class="f">'+label+(o.hint?'<small>'+o.hint+'</small>':'')+'<input type="number" inputmode="decimal" id="f-'+path.replace(/\./g,'-')+'" data-path="'+path+'" step="'+(o.step||'any')+'" min="'+(o.min===undefined?'':o.min)+'" max="'+(o.max===undefined?'':o.max)+'" value="'+getPath(st,path)+'"></label>';
+}
+function sel(path,label,opts,hint){
+  return '<label class="f">'+label+(hint?'<small>'+hint+'</small>':'')+'<select id="f-'+path.replace(/\./g,'-')+'" data-path="'+path+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(getPath(st,path))===String(o[0])?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>';
+}
+function measCardHTML(){
+  var h='<div class="card" id="meas-card"><h2>Metingen binnen</h2><p class="muted small" style="margin-top:6px">Wat je bij het openen of hier invult. Hier controleer je welke waarden er zijn en wanneer ze zijn ingevuld. Handmatige waarden tellen 8 uur, een sensor 3 uur. Daarna gaat de app weer zelf rekenen.</p>'
+    +'<table class="mtab"><thead><tr><th>Waar</th><th>Temperatuur</th><th>Vochtigheid</th><th>Ingevuld</th></tr></thead><tbody>';
+  [['ben','Beneden'],['bov','Boven']].forEach(function(r){
+    var m=st.meas[r[0]];
+    h+='<tr><td>'+r[1]+'</td><td><input type="text" inputmode="decimal" id="f-m-'+r[0]+'-t" data-meas="'+r[0]+'.t" value="'+(m.t>0?nf(m.t,1):'')+'" placeholder="°C" aria-label="Temperatuur '+r[1].toLowerCase()+'"></td><td><input type="text" inputmode="decimal" id="f-m-'+r[0]+'-h" data-meas="'+r[0]+'.h" value="'+(m.h>0?nf(m.h,0):'')+'" placeholder="%" aria-label="Luchtvochtigheid '+r[1].toLowerCase()+'"></td><td id="ms-'+r[0]+'"></td></tr>';
+  });
+  h+='</tbody></table><p class="msg err" id="meas-err" role="alert"></p><div class="mact"><button class="btn sm" type="button" data-open-meas="1">Invulscherm openen</button><button class="btn sm warn" type="button" id="meas-clear">Metingen wissen</button></div><div id="meas-sensor"></div></div>';
+  return h;
+}
+function measStatus(){
+  [['ben','beneden'],['bov','boven']].forEach(function(r){
+    var m=st.meas[r[0]],el=$('ms-'+r[0]),x=measRec(r[0]),txt='Nog niet ingevuld';
+    if(!el)return;
+    if(m.at>0&&m.t>0)txt='Ingevuld '+clock(m.at)+' ('+ageTxt(m.at)+')'+(Date.now()-m.at>8*3600000?' <span class="lvl m">verouderd</span>':'');
+    var a=IND&&IND[r[1]];
+    if(a&&typeof a.at==='number')txt+='<br><span class="muted">Sensor '+(typeof a.t==='number'?nf(a.t,1)+' °C':'')+(typeof a.h==='number'?' · '+nf(a.h,0)+'%':'')+' '+clock(a.at)+(x&&x.auto?' (in gebruik)':'')+'</span>';
+    el.innerHTML=txt;
+  });
+  var ml=$('measline');if(ml)ml.textContent=measLine();
+}
+function buildSettings(){
+  var html='';
+  html+=measCardHTML();
+  html+='<div class="card"><h2>Woning en verwarming</h2><div class="form">'
+    +sel('insul','Isolatie van de woning',Object.keys(INSUL).map(function(k){return [k,INSUL[k].n];}),'Kies het niveau dat het best past bij je energielabel.')
+    +num('area','Woonoppervlak (m²)',{min:30,max:500,step:1})
+    +'<label class="f">Boven elektrisch verwarmd<small>Panelen op stroom (rendement 1), de rest van het huis.</small><span class="chk" style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="f-upel" data-path="upel"'+(st.upel?' checked':'')+'> Ja, met panelen</span></label>'
+    +num('ground','Oppervlak met vloerverwarming (m²)',{min:10,max:300,step:1,hint:'Alleen de benedenverdieping. Een zware vloer houdt warmte lang vast, lichtere verdiepingen reageren sneller.'})
+    +'<label class="f">Ventilatie met warmtewisselaar<small>Terugwinning van warmte uit afgezogen lucht.</small><span class="chk" style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="f-wtw" data-path="wtw"'+(st.wtw?' checked':'')+'> Ja, aanwezig</span></label>'
+    +sel('heatsrc','Warmtebron',[['hybride','Hybride (warmtepomp en gas)'],['wp','Alleen warmtepomp'],['gas','Alleen gasketel']],'Het plan kiest per uur de goedkoopste bron.')
+    +num('tset','Gewenste binnentemperatuur (°C)',{min:15,max:25,step:0.5})
+    +num('band','Toegestane afwijking (± °C)',{min:0,max:2,step:0.1,hint:'Bij vloerverwarming is 0,5 °C goed te doen.'})
+    +num('supply','Aanvoertemperatuur vloer (°C)',{min:25,max:45,step:1})
+    +num('pmax','Maximaal vermogen verwarming (kW)',{min:2,max:15,step:0.5})
+    +num('cop','Rendementsfactor warmtepomp',{min:0.2,max:0.5,step:0.01,hint:'0,36 geeft een COP van ongeveer 4 bij 10 °C buiten. Pas aan op je eigen meting.'})
+    +num('gaseff','Rendement gasketel',{min:0.7,max:1.05,step:0.01})
+    +'</div></div>';
+  html+='<div class="card"><h2>Zonnepanelen (Enphase)</h2><div class="form">'
+    +num('kwp','Totaal vermogen (kWp)',{min:0.5,max:30,step:0.1,hint:'Aantal panelen maal Wp per paneel, bijvoorbeeld 12 × 375 Wp = 4,5 kWp.'})
+    +sel('paz','Richting van de panelen',[[180,'Zuid'],[135,'Zuidoost'],[225,'Zuidwest'],[90,'Oost'],[270,'West'],[0,'Noord']])
+    +num('tilt','Hellingshoek (°)',{min:0,max:90,step:1})
+    +num('base','Basisverbruik zonder apparaten (kW)',{min:0,max:3,step:0.05,hint:'Het nachtverbruik op je P1-meter, bijvoorbeeld 0,25 kW.'})
+    +'</div></div>';
+  html+='<div class="card"><h2>Houtkachel</h2><div class="form">'
+    +'<label class="f">Ik heb een houtkachel<small>De app geeft dan een stookadvies.</small><span class="chk" style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="f-stove" data-path="stove"'+(st.stove?' checked':'')+'> Ja</span></label>'
+    +num('stovekw','Vermogen van de kachel (kW)',{min:1,max:15,step:0.5,hint:'Staat op het typeplaatje. Voor een goed geïsoleerd huis is 4 tot 5 kW al veel.'})
+    +num('stoveh','Aantal uur stoken per avond',{min:1,max:6,step:1})
+    +num('woodcost','Kosten hout per kWh warmte (€)',{min:0,max:0.3,step:0.005,hint:'0 voor gratis hout. Gekocht hout kost grofweg € 0,08 tot € 0,12.'})
+    +'</div></div>';
+  html+='<div class="card"><h2>Douchen</h2><div class="form">'
+    +num('showermin','Minuten onder de douche',{min:1,max:30,step:1})
+    +num('showerlpm','Liter per minuut',{min:3,max:20,step:0.5,hint:'Een gewone douchekop geeft 8 tot 10 liter, een zuinige 5 tot 6.'})
+    +'</div></div>';
+  html+='<div class="card"><h2>Tarieven</h2><div class="form">'
+    +num('opslag','Belasting en opslag per kWh (€, incl. btw)',{min:0,max:0.5,step:0.005,hint:'Energiebelasting plus inkoopkosten. Staat op je contract.'})
+    +num('gas','Gasprijs per m³ (€, alles inbegrepen)',{min:0.5,max:3,step:0.01,hint:'Gemiddeld variabel tarief op 9 okt 2026: € 1,74. Kijk op je jaarnota voor de jouwe.'})
+    +sel('fimode','Terugleververgoeding',[['dyn','Volgt de beursprijs (dynamisch contract)'],['vast','Vast bedrag per kWh']],'Bij een dynamisch contract kost terugleveren geld als de beursprijs negatief is.')
+    +num('terugkosten','Terugleverkosten per kWh (€)',{min:0,max:0.3,step:0.005,hint:'Wat je leverancier per teruggeleverde kWh afhoudt. Kijk op je contract, veel leveranciers rekenen enkele centen.'})
+    +num('feedin','Vast bedrag terugleveren per kWh (€)',{min:-0.1,max:0.4,step:0.005,hint:'Alleen in gebruik bij "Vast bedrag per kWh".'})
+    +'</div><p class="muted small" style="margin-top:10px">Tot 1 januari 2027 mag je nog salderen. Dan wordt teruggeleverde stroom over het jaar verrekend met wat je afneemt, en is terugleveren gunstiger dan deze berekening laat zien. Vanaf 2027 klopt de berekening zoals hij is.</p></div>';
+  html+='<div class="card"><h2>Aansluiting</h2><div class="form">'
+    +sel('conn','Hoofdzekering en fasen',[[5.8,'1 fase, 25 A (5,8 kW)'],[8.1,'1 fase, 35 A (8,1 kW)'],[11,'3 fasen, 16 A (11 kW)'],[13.8,'3 fasen, 20 A (13,8 kW)'],[17.3,'3 fasen, 25 A (17,3 kW)'],[24.2,'3 fasen, 35 A (24,2 kW)']],'Staat op je meterkast of in Mijn Aansluiting van je netbeheerder.')
+    +'</div><p class="muted small" style="margin-top:10px">De app houdt het gelijktijdige verbruik onder 80% van deze waarde. Bij drie fasen rekent hij met het totaal. Een groot apparaat op één fase kan eerder tegen de grens aan.</p></div>';
+  html+='<div class="card"><h2>Apparaten</h2><p class="muted small" style="margin-top:6px">Verbruik per beurt, looptijd en het tijdvenster waarin je het apparaat wilt laten draaien. Begin- en eindtijd zijn hele uren. Het piekvermogen is het hoogste vermogen tijdens het draaien, bijvoorbeeld tijdens het verwarmen van het water.</p><div class="apt-wrap"><div class="apt"><span class="h"></span><span class="h">kWh per beurt</span><span class="h">Uren</span><span class="h">Vanaf (uur)</span><span class="h">Klaar voor</span><span class="h">Nu start om</span><span class="h">Piek (kW)</span>';
+  st.appl.forEach(function(a,i){
+    html+='<span class="nm">'+esc(a.name)+'</span>'
+      +['kwh','dur','from','to','typ','kw'].map(function(k){var rng={kwh:[0.05,10,0.05],dur:[0.25,6,0.25],from:[0,23,1],to:[1,24,1],typ:[0,23,1],kw:[0.1,12,0.1]}[k];return '<input type="number" inputmode="decimal" aria-label="'+esc(a.name)+' '+k+'" id="f-appl-'+i+'-'+k+'" data-path="appl.'+i+'.'+k+'" min="'+rng[0]+'" max="'+rng[1]+'" step="'+rng[2]+'" value="'+a[k]+'">';}).join('');
+  });
+  html+='</div></div></div>';
+  html+='<div class="card"><h2>Echte stroomprijzen plakken</h2><p class="muted small" style="margin-top:6px">Kopieer de 24 uurprijzen van morgen uit de app van je energieleverancier. Zet ze achter elkaar, gescheiden door een spatie of nieuwe regel, beginnend bij 00:00. Gebruik een punt of komma als decimaal en een spatie als scheiding. Prijzen in cent worden herkend.</p><div class="form">';
+  DAYS.forEach(function(d,i){
+    html+='<label class="f">'+esc(d.name)+' '+esc(d.label)+'<textarea id="f-price-'+i+'" data-price="'+d.key+'" spellcheck="false" placeholder="0,24 0,23 0,22 …">'+esc(st.prices[d.key]||'')+'</textarea></label>';
+  });
+  html+='</div></div>';
+  html+='<div class="card"><h2>Koppeling met P1-meter en Enphase</h2><p class="muted" style="margin-top:6px">Deze pagina kan niet rechtstreeks bij je P1-meter of Enphase-omvormer, omdat die in je eigen netwerk staan. Daarom werkt het hier met schattingen die je zelf invult. Lees je werkelijke verbruik per apparaat af in je P1-app en zet het getal in de tabel hierboven; dan klopt de berekening het best.</p></div>';
+  html+='<div class="card"><button class="btn warn" id="reset" type="button">Standaardwaarden herstellen</button><p class="muted small" id="resetmsg" style="margin-top:8px"></p></div>';
+  $('p-instellingen').innerHTML=html;
+}
+
+/* ---------- Sturing ---------- */
+/* ---------- Invulscherm voor de metingen ---------- */
+var askedThisSession=false;
+function fieldVal(v,dec){return v>0?nf(v,dec).replace('.',','):'';}
+function openMeas(){
+  var b=lastRec('ben'),o=lastRec('bov');
+  $('mm-bt').value=b?fieldVal(b.t,1):'';$('mm-bh').value=b&&b.h?fieldVal(b.h,0):'';
+  $('mm-ot').value=o?fieldVal(o.t,1):'';$('mm-oh').value=o&&o.h?fieldVal(o.h,0):'';
+  $('mm-bs').textContent=b?'Laatste waarde: '+clock(b.at)+' ('+ageTxt(b.at)+')'+(b.auto?', van de sensor':'')+(Date.now()-b.at>(b.auto?3:8)*3600000?', controleer of die nog klopt':''):'Nog niet ingevuld.';
+  $('mm-os').textContent=o?'Laatste waarde: '+clock(o.at)+' ('+ageTxt(o.at)+')'+(o.auto?', van de sensor':'')+(Date.now()-o.at>(o.auto?3:8)*3600000?', controleer of die nog klopt':''):'Nog niet ingevuld.';
+  $('mm-err').textContent='';
+  $('meas-modal').hidden=false;
+  setTimeout(function(){try{$('mm-bt').focus();}catch(e){}},50);
+}
+function closeMeas(){$('meas-modal').hidden=true;}
+function storeMeas(loc,t,h){
+  var m=st.meas[loc];
+  m.t=t===null?0:t;m.h=h===null?0:h;m.at=(t===null&&h===null)?0:Date.now();
+}
+function saveMeas(){
+  var bt=parseNum($('mm-bt').value),bh=parseNum($('mm-bh').value),ot=parseNum($('mm-ot').value),oh=parseNum($('mm-oh').value),err='';
+  function badT(v){return v!==null&&(isNaN(v)||v<5||v>40);}
+  function badH(v){return v!==null&&(isNaN(v)||v<5||v>100);}
+  if(badT(bt)||badT(ot))err='Een temperatuur moet tussen 5 en 40 °C liggen.';
+  else if(badH(bh)||badH(oh))err='Een luchtvochtigheid moet tussen 5 en 100% liggen.';
+  else if((bt===null)!==(bh===null)||(ot===null)!==(oh===null))err='Vul bij beneden of boven zowel de temperatuur als de luchtvochtigheid in, of laat allebei leeg.';
+  if(err){$('mm-err').textContent=err;return;}
+  if(bt!==null||bh!==null)storeMeas('ben',bt,bh);
+  if(ot!==null||oh!==null)storeMeas('bov',ot,oh);
+  save();measRemoteSave();closeMeas();afterMeasChange();
+}
+function afterMeasChange(){
+  cache={};
+  var g=function(id){return $(id);};
+  ['ben','bov'].forEach(function(l){var m=st.meas[l];var t=g('f-m-'+l+'-t'),h=g('f-m-'+l+'-h');if(t)t.value=m.t>0?nf(m.t,1):'';if(h)h.value=m.h>0?nf(m.h,0):'';});
+  measStatus();renderActive();
+}
+function askAtOpen(){
+  if(askedThisSession)return;
+  askedThisSession=true;
+  var b=measRec('ben'),o=measRec('bov'),lim=60*60000,now=Date.now();
+  function ok(r){return r&&r.h&&now-r.at<lim;}
+  if(ok(b)&&ok(o))return;
+  openMeas();
+}
+function renderDays(){
+  var s='';
+  DAYS.forEach(function(d,i){s+='<button type="button" data-day="'+i+'" aria-pressed="'+(ui.day===i)+'">'+esc(d.label)+'</button>';});
+  $('days').innerHTML=s;
+  $('days').hidden=(ui.tab==='instellingen'||ui.tab==='handleiding');
+}
+function renderActive(){
+  renderDays();
+  if(ui.tab==='overzicht')renderOverview();
+  else if(ui.tab==='apparaten')renderAppliances();
+  else if(ui.tab==='verwarming')renderHeating();
+  else if(ui.tab==='handleiding'){var gp=$('p-handleiding'),gt=$('guide-tpl');if(gt&&!gp.firstChild)gp.innerHTML=gt.innerHTML;}
+}
+function showTab(t){
+  ui.tab=t;saveUi();
+  ['overzicht','apparaten','verwarming','instellingen','handleiding'].forEach(function(k){$('p-'+k).hidden=(k!==t);});
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-tab')===t));});
+  renderActive();
+}
+function init(){
+  load();
+  ui.day=0;
+  if(['overzicht','apparaten','verwarming','instellingen','handleiding'].indexOf(ui.tab)<0)ui.tab='overzicht';
+  var stale=SNAP.fetched&&(Date.now()-SNAP.fetched>30*3600000);
+  $('stamp').textContent='Weer van '+SNAP.stamp+(stale?' · verouderd':'');
+  if(SNAP.src)$('wxsrc').textContent='Weergegevens: '+SNAP.src+'.';
+  buildSettings();
+  measStatus();
+  $('tabs').addEventListener('click',function(e){var b=e.target.closest('.tab');if(b)showTab(b.getAttribute('data-tab'));});
+  $('days').addEventListener('click',function(e){var b=e.target.closest('button[data-day]');if(!b)return;ui.day=+b.getAttribute('data-day');saveUi();renderActive();});
+  $('measbtn').addEventListener('click',openMeas);
+  $('mm-save').addEventListener('click',saveMeas);
+  $('mm-skip').addEventListener('click',closeMeas);
+  $('meas-modal').addEventListener('keydown',function(e){if(e.key==='Escape')closeMeas();if(e.key==='Enter'&&e.target.tagName==='INPUT')saveMeas();});
+  document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-open-meas]'))openMeas();});
+  $('p-instellingen').addEventListener('click',function(e){
+    if(e.target.id==='meas-clear'){st.meas={ben:{t:0,h:0,at:0},bov:{t:0,h:0,at:0}};save();measRemoteSave();afterMeasChange();}
+  });
+  $('p-instellingen').addEventListener('change',function(e){
+    var t=e.target;
+    if(t.hasAttribute('data-meas')){
+      var pp=t.getAttribute('data-meas').split('.'),loc=pp[0],fld=pp[1],v=parseNum(t.value),max=fld==='t'?40:100,min=5,er=$('meas-err');
+      if(v!==null&&(isNaN(v)||v<min||v>max)){er.textContent=(fld==='t'?'Temperatuur':'Luchtvochtigheid')+' moet tussen '+min+' en '+max+(fld==='t'?' °C':'%')+' liggen.';return;}
+      er.textContent='';
+      var m=st.meas[loc];m[fld]=v===null?0:v;m.at=(m.t>0||m.h>0)?Date.now():0;
+      save();measRemoteSave();cache={};measStatus();renderActive();return;
+    }
+    if(t.hasAttribute('data-path')){
+      var p=t.getAttribute('data-path'),v;
+      if(t.type==='checkbox')v=t.checked;
+      else if(t.type==='number'){v=parseFloat(String(t.value).replace(',','.'));if(!isFinite(v))return;}
+      else{v=t.value;var cur=getPath(st,p);if(typeof cur==='number')v=parseFloat(v);}
+      setPath(st,p,v);save();
+    }else if(t.hasAttribute('data-price')){
+      st.prices[t.getAttribute('data-price')]=t.value;save();
+      var pp=parsePrices(t.value),old=t.parentNode.querySelector('.err');if(old)old.remove();
+      if(pp&&pp.error){var m=document.createElement('div');m.className='err';m.textContent=pp.error;t.parentNode.appendChild(m);}
+    }
+  });
+  $('p-instellingen').addEventListener('click',function(e){
+    if(e.target.id!=='reset')return;
+    var b=e.target;
+    if(b.getAttribute('data-sure')==='1'){st=clone(DEF);save();buildSettings();$('resetmsg').textContent='Teruggezet naar de standaardwaarden.';}
+    else{b.setAttribute('data-sure','1');b.textContent='Klik nog een keer om te bevestigen';}
+  });
+  var rt=null;
+  window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(ui.tab!=='instellingen'&&ui.tab!=='handleiding')renderActive();},150);});
+  showTab(ui.tab);
+}
+/* Optioneel: data.json (weer en prijzen) en settings.json (eigen standaardwaarden) naast deze pagina.
+   Ontbreken ze, dan gebruikt de pagina de gegevens die erin zijn opgenomen. */
+function getJson(url){
+  return fetch(url,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+}
+function applyData(d){
+  if(!d||typeof d!=='object'||typeof d.start!=='number'||!Array.isArray(d.temp)||!Array.isArray(d.cloud)||d.temp.length!==d.cloud.length||d.temp.length<24)return;
+  ['start','stamp','temp','cloud','ghi','dni','dhi','rh','src','epex','epexStamp','ttf','fetched'].forEach(function(k){if(d[k]!==undefined)SNAP[k]=d[k];});
+  ['ghi','dni','dhi','rh'].forEach(function(k){if(SNAP[k]&&(!Array.isArray(SNAP[k])||SNAP[k].length!==SNAP.temp.length||SNAP[k].some(function(v){return typeof v!=='number'||!isFinite(v);}))){if(k==='rh')delete SNAP.rh;else{delete SNAP.ghi;delete SNAP.dni;delete SNAP.dhi;}}});
+  if(typeof d.lat==='number'&&typeof d.lon==='number'){LAT=d.lat;LON=d.lon;}
+}
+
+/* ---------- Live verversen in de browser (weer van KNMI HARMONIE via Open-Meteo, prijzen van Energy-Charts) ---------- */
+function fetchJson(url,ms){
+  return new Promise(function(resolve,reject){
+    var done=false,tm=setTimeout(function(){if(!done){done=true;reject(new Error('time-out'));}},ms||9000);
+    fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(j){if(!done){done=true;clearTimeout(tm);resolve(j);}}).catch(function(e){if(!done){done=true;clearTimeout(tm);reject(e);}});
+  });
+}
+/* Open-Meteo geeft straling als gemiddelde over het voorgaande uur: het uur dat om t begint hoort bij het label t+1 uur. */
+function buildLiveWeather(j,now){
+  var h=j&&j.hourly;
+  if(!h||!Array.isArray(h.time))throw new Error('onverwacht antwoord');
+  var names=['temperature_2m','cloud_cover','shortwave_radiation','direct_normal_irradiance','diffuse_radiation'],idx={},i,hasRh=Array.isArray(h.relative_humidity_2m)&&h.relative_humidity_2m.length===h.time.length;
+  names.forEach(function(n){if(!Array.isArray(h[n])||h[n].length!==h.time.length)throw new Error('ontbrekende reeks '+n);});
+  for(i=0;i<h.time.length;i++)idx[Date.parse(h.time[i]+'Z')]=i;
+  var start=Math.floor(now/3600000)*3600000, lastKey=localOf(now+2*86400000).key;
+  var o={temp:[],cloud:[],ghi:[],dni:[],dhi:[],rh:[]}, t=start, n=0;
+  while(localOf(t).key<=lastKey&&n<120){
+    var a=idx[t]; if(a===undefined)throw new Error('uur ontbreekt');
+    var b=idx[t+3600000]; if(b===undefined)b=a;
+    var vals=[h.temperature_2m[a],h.cloud_cover[a],h.shortwave_radiation[b],h.direct_normal_irradiance[b],h.diffuse_radiation[b]];
+    for(i=0;i<5;i++){if(typeof vals[i]!=='number'||!isFinite(vals[i]))throw new Error('lege waarde');}
+    o.temp.push(Math.round(vals[0]*10)/10);o.cloud.push(Math.round(vals[1]*10)/10);o.ghi.push(Math.round(vals[2]*10)/10);o.dni.push(Math.round(vals[3]*10)/10);o.dhi.push(Math.round(vals[4]*10)/10);
+    if(hasRh&&typeof h.relative_humidity_2m[a]==='number')o.rh.push(Math.round(h.relative_humidity_2m[a]));else hasRh=false;
+    t+=3600000;n++;
+  }
+  if(o.temp.length<24)throw new Error('te weinig uren');
+  o.start=start;
+  if(!hasRh||o.rh.length!==o.temp.length)delete o.rh;
+  return o;
+}
+function buildLivePrices(j){
+  if(!j||!Array.isArray(j.unix_seconds)||!Array.isArray(j.price)||j.unix_seconds.length!==j.price.length)throw new Error('onverwacht antwoord');
+  var days={},i,k,out={};
+  for(i=0;i<j.unix_seconds.length;i++){
+    var p=j.price[i]; if(typeof p!=='number'||!isFinite(p))continue;
+    var l=localOf(j.unix_seconds[i]*1000);
+    (days[l.key]=days[l.key]||{});(days[l.key][l.h]=days[l.key][l.h]||[]).push(p);
+  }
+  Object.keys(days).forEach(function(key){
+    var hrs=days[key],cnt={},ok=true,v=[];
+    for(k=0;k<24;k++){if(!hrs[k]){ok=false;break;}cnt[hrs[k].length]=1;v.push(Math.round(hrs[k].reduce(function(a,b){return a+b;},0)/hrs[k].length*100)/100);}
+    if(ok&&Object.keys(cnt).length===1)out[key]=v;
+  });
+  return out;
+}
+function dateKey(ms){return localOf(ms).key;}
+var liveBusy=false;
+function liveRefresh(){
+  if(liveBusy||typeof fetch!=='function')return Promise.resolve();
+  liveBusy=true;
+  var now=Date.now(),d0=dateKey(now),d2=dateKey(now+2*86400000);
+  var wUrl='https://api.open-meteo.com/v1/forecast?latitude='+LAT.toFixed(4)+'&longitude='+LON.toFixed(4)+'&models=knmi_seamless&timezone=GMT&forecast_days=4&past_days=1&hourly=temperature_2m,cloud_cover,shortwave_radiation,direct_normal_irradiance,diffuse_radiation,relative_humidity_2m';
+  var pUrl='https://api.energy-charts.info/price?bzn=NL&start='+d0+'&end='+d2;
+  var nowD=new Date(now), stampTxt=dshort.format(nowD).replace('.','')+' '+nowD.getFullYear()+', '+clock(now);
+  var changed=false;
+  return Promise.all([
+    fetchJson(wUrl).then(function(j){
+      var w=buildLiveWeather(j,now);
+      SNAP.start=w.start;SNAP.temp=w.temp;SNAP.cloud=w.cloud;SNAP.ghi=w.ghi;SNAP.dni=w.dni;SNAP.dhi=w.dhi;if(w.rh)SNAP.rh=w.rh;else delete SNAP.rh;
+      SNAP.src='KNMI HARMONIE via Open-Meteo.com (CC BY 4.0)';SNAP.stamp=stampTxt;SNAP.fetched=now;changed=true;
+    }).catch(function(){}),
+    fetchJson(pUrl).then(function(j){
+      var fresh=buildLivePrices(j);
+      if(Object.keys(fresh).length){
+        var ep={};Object.keys(SNAP.epex||{}).forEach(function(k){if(k>=d0)ep[k]=SNAP.epex[k];});
+        Object.keys(fresh).forEach(function(k){ep[k]=fresh[k];});
+        SNAP.epex=ep;SNAP.epexStamp=stampTxt;changed=true;
+      }
+    }).catch(function(){})
+  ]).then(function(){
+    liveBusy=false;
+    if(changed&&booted){
+      cache={};DAYS=buildDays();
+      if(ui.day>=DAYS.length)ui.day=0;
+      $('stamp').textContent='Weer van '+SNAP.stamp;
+      if(SNAP.src)$('wxsrc').textContent='Weergegevens: '+SNAP.src+'.';
+      renderActive();
+    }
+  });
+}
+/* Middernacht en uurwissel: dagen opnieuw opbouwen, zonder dat ophalen hoeft te lukken. */
+var tickKey=null,tickHour=null;
+function clockTick(){
+  if(!booted)return;
+  var l=localOf(Date.now());
+  if(tickKey===null){tickKey=l.key;tickHour=l.h;return;}
+  if(l.key===tickKey&&l.h===tickHour)return;
+  var newDay=l.key!==tickKey;
+  tickKey=l.key;tickHour=l.h;
+  var nd;try{nd=buildDays();}catch(e){nd=[];}
+  if(nd.length){DAYS=nd;if(newDay)ui.day=0;else if(ui.day>=DAYS.length)ui.day=0;}
+  cache={};
+  if(newDay||!curTouched)curK=null;
+  if(newDay)curTouched=false;
+  try{renderActive();}catch(e){}
+}
+setInterval(clockTick,20000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)clockTick();});
+var booted=false;
+function boot(d,s){
+  if(booted)return;
+  booted=true;
+  try{applyData(d);}catch(e){}
+  try{if(s&&typeof s==='object'){DEF=merge(clone(DEF),s);st=clone(DEF);}}catch(e){}
+  DAYS=buildDays();
+  init();
+  measRemoteLoad().then(function(){afterMeasChange();setTimeout(askAtOpen,300);});
+}
+if(typeof fetch==='function'&&/^https?:$/.test(location.protocol)){
+  Promise.all([getJson('data.json'),getJson('settings.json'),getJson('indoor.json'),getJson('outside.json')]).then(function(r){try{if(r[2]&&typeof r[2]==='object')IND=r[2];if(r[3]&&typeof r[3]==='object')OUT=r[3];}catch(e){}boot(r[0],r[1]);liveRefresh();});
+  setInterval(function(){if(booted)liveRefresh();},1800000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&booted&&SNAP.fetched&&Date.now()-SNAP.fetched>1200000)liveRefresh();});
+  setInterval(function(){Promise.all([getJson('indoor.json'),getJson('outside.json')]).then(function(r){if(!booted)return;if(r[0]&&typeof r[0]==='object')IND=r[0];if(r[1]&&typeof r[1]==='object')OUT=r[1];measStatus();renderActive();});},300000);
+  setTimeout(function(){boot();liveRefresh();},2500);
+}else boot();
+})();
+</script>
+
+</body></html>
