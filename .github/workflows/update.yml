@@ -18,9 +18,20 @@ jobs:
           python-version: '3.12'
       - name: Weer en prijzen ophalen
         run: python update.py || echo "update.py meldde een probleem, zie hierboven"
+      - name: Sensors uit eWeLink ophalen
+        continue-on-error: true    # een fout hier breekt de rest niet; indoor.json blijft dan zoals hij was
+        env:
+          EWELINK_APPID: ${{ secrets.EWELINK_APPID }}
+          EWELINK_APPSECRET: ${{ secrets.EWELINK_APPSECRET }}
+          EWELINK_TOKENS: ${{ secrets.EWELINK_TOKENS }}
+          EWELINK_GH_TOKEN: ${{ secrets.EWELINK_GH_TOKEN }}
+          EWELINK_REGION: ${{ secrets.EWELINK_REGION || 'eu' }}
+          EWELINK_DEVICE_BENEDEN: ${{ secrets.EWELINK_DEVICE_BENEDEN }}
+          EWELINK_DEVICE_BOVEN: ${{ secrets.EWELINK_DEVICE_BOVEN }}
+        run: python ewelink.py
       - name: Vastleggen als er iets veranderd is
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json
+          git add data.json $(ls indoor.json 2>/dev/null)
           git diff --cached --quiet || (git commit -m "Gegevens ververst" && git push)
