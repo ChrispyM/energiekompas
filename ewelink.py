@@ -95,6 +95,13 @@ def load_tokens():
     if tok.get("rtExp", 0) and tok["rtExp"] < now_ms():
         raise Fout("de refresh token is verlopen. Draai op je computer: python ewelink.py --login")
     if tok.get("atExp", 0) - now_ms() < REFRESH_BEFORE or os.environ.get("EWELINK_FORCE_REFRESH") == "true":
+        # Verversen maakt de oude tokens ongeldig. Eerst controleren of het secret te schrijven is.
+        try:
+            save_tokens(tok)
+        except Fout as x:
+            print("LET OP: tokens niet ververst, want %s. Controleer EWELINK_GH_TOKEN (Secrets: Read and write)" % x, file=sys.stderr)
+            tok["opslagFout"] = True
+            return tok
         d = call(tok.get("region") or env("EWELINK_REGION", "eu"), "POST", "/v2/user/refresh", body={"rt": tok["rt"]})
         tok.update(at=d["at"], rt=d["rt"], atExp=now_ms() + 30 * DAY, rtExp=now_ms() + 60 * DAY)
         mask(tok["at"], tok["rt"])
