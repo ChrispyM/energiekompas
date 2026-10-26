@@ -127,16 +127,10 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
 .apt{min-width:600px}
 .err{color:var(--bad);font-size:12.5px;margin-top:2px}
 .measbar{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;padding-bottom:8px}
+.measbar .lvl{white-space:nowrap}
 .measbar .ml{font-size:13px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
 .btn.sm{padding:6px 12px;font-size:13px}
 .btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.modal{position:fixed;inset:0;background:rgba(8,20,24,.55);display:flex;align-items:flex-end;justify-content:center;z-index:30;padding:0}
-.sheet{background:var(--panel);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:18px 16px 22px;max-height:94vh;overflow:auto;border:1px solid var(--line)}
-@media (min-width:560px){.modal{align-items:center;padding:16px}.sheet{border-radius:14px}}
-.mgrp{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
-.mgrp h3{font-size:15px}
-.mrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
-.mrow label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
 .msg{font-size:12.5px;color:var(--muted);margin-top:6px}
 .msg.err{color:var(--bad)}
 .mact{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
@@ -159,7 +153,7 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
     <h1>Energiekompas</h1>
     <span class="stamp" id="stamp"></span>
   </div>
-  <div class="measbar"><span class="ml" id="measline"></span><button class="btn sm" id="measbtn" type="button">Binnen invullen</button></div>
+  <div class="measbar"><span class="ml" id="measline"></span><span class="lvl" id="sensorstat" role="status"></span></div>
   <div class="bar">
     <div class="tabs" role="tablist" aria-label="Onderdelen" id="tabs">
       <button class="tab" role="tab" data-tab="overzicht" aria-selected="true">Overzicht</button>
@@ -177,21 +171,6 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
     <section class="panel" id="p-instellingen" hidden></section>
     <section class="panel" id="p-handleiding" hidden></section>
   </main>
-  <div class="modal" id="meas-modal" hidden role="dialog" aria-modal="true" aria-labelledby="mm-t">
-    <div class="sheet">
-      <h2 id="mm-t">Wat meten je sensoren nu?</h2>
-      <p class="muted small" style="margin-top:6px">Lees de temperatuur en luchtvochtigheid af van het scherm van de sensor of uit de eWeLink-app. Daarmee rekent de app het ventilatieadvies en de binnentemperatuur van de vloerverwarming. Laat een veld leeg als je het niet weet.</p>
-      <div class="mgrp"><h3>Beneden (woonkamer)</h3><div class="mrow">
-        <label>Temperatuur (°C)<input type="text" inputmode="decimal" id="mm-bt" autocomplete="off" placeholder="20,5"></label>
-        <label>Luchtvochtigheid (%)<input type="text" inputmode="decimal" id="mm-bh" autocomplete="off" placeholder="50"></label></div><p class="msg" id="mm-bs"></p></div>
-      <div class="mgrp"><h3>Boven</h3><div class="mrow">
-        <label>Temperatuur (°C)<input type="text" inputmode="decimal" id="mm-ot" autocomplete="off" placeholder="19,0"></label>
-        <label>Luchtvochtigheid (%)<input type="text" inputmode="decimal" id="mm-oh" autocomplete="off" placeholder="55"></label></div><p class="msg" id="mm-os"></p></div>
-      <p class="msg err" id="mm-err" role="alert"></p>
-      <div class="mact"><button class="btn pri" id="mm-save" type="button">Opslaan</button><button class="btn" id="mm-skip" type="button">Nu overslaan</button></div>
-      <p class="msg">De app onthoudt je laatste temperatuur en luchtvochtigheid (boven en beneden) met het tijdstip, ook na sluiten of herstarten. Open je dit scherm opnieuw, dan staan ze er weer in; pas alleen aan wat veranderd is. Bij Instellingen onder "Metingen binnen" zie je ze ook.</p>
-    </div>
-  </div>
   <p class="foot"><span id="wxsrc">Weergegevens: MET Norway (api.met.no), licentie CC BY 4.0.</span> Zonnestand is berekend voor Amsterdam. Alle prijzen en verbruiken zijn schattingen; pas ze aan bij Instellingen.</p>
 </div>
 
@@ -210,7 +189,7 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
 <li><b>Apparaten:</b> per apparaat het goedkoopste startuur. De planning houdt je aansluiting in de gaten: apparaten die samen te veel vragen, worden verschoven.</li>
 <li><b>Verwarming:</b> het verwachte verloop van de binnentemperatuur, wanneer je de vloerverwarming laat opwarmen, wat gas of de warmtepomp kost, en het stookadvies voor de houtkachel.</li>
 <li><b>Instellingen:</b> bovenaan staan je <b>Metingen binnen</b>: welke waarden je hebt ingevuld en wanneer. Daaronder je woning, panelen, tarieven en apparaten. Alles wat je wijzigt, wordt op dit apparaat bewaard en meteen doorgerekend.</li>
-<li><b>Binnen invullen:</b> bij het openen vraagt de app naar de temperatuur en luchtvochtigheid van de sensoren beneden en boven. Heb je ze het afgelopen uur al ingevuld, dan vraagt hij het niet nog eens. Met de knop rechtsboven bij Binnen invullen kan het altijd.</li>
+<li><b>Sensors:</b> de temperatuur en luchtvochtigheid beneden en boven komen elk uur vanzelf uit eWeLink. Bovenaan zie je of dat lukt: groen <b>Sensors verbonden</b> betekent dat beide sensors de afgelopen 3 uur iets hebben doorgegeven. Oranje of rood betekent dat een of beide sensors niets recents hebben gemeld.</li>
 </ul>
 </div>
 
@@ -254,9 +233,9 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
 <div class="card guide">
 <h2>Wat de app niet weet</h2>
 <ul class="tip">
-<li>Hij ziet je P1-meter, je Enphase-omvormer en je sensoren niet rechtstreeks. Wat je meet, vul je in.</li>
+<li>Hij ziet je P1-meter en je Enphase-omvormer niet rechtstreeks. De sensors binnen komen via eWeLink, met maximaal een uur vertraging.</li>
 <li>De leveranciersopslag, je werkelijke warmteverlies en de COP van je warmtepomp zijn schattingen. Zie het als richting.</li>
-<li>De binnentemperatuur in de grafiek is een berekening, geen meting, tenzij je de temperatuur beneden hebt ingevuld (onder Binnen invullen).</li>
+<li>De binnentemperatuur in de grafiek is een berekening, geen meting, tenzij de sensor beneden de afgelopen 3 uur iets heeft gemeld.</li>
 <li>Het buitenweer komt uit een verwachting. Bij plotselinge wolken of regen kan de zonopbrengst afwijken.</li>
 </ul>
 </div>
@@ -530,14 +509,6 @@ function measRec(loc){
   if(man&&aut)return aut.at>man.at?aut:man;
   return man||aut;
 }
-/* Laatst bekende waarde, ook als die oud is: voor het invulscherm. */
-function lastRec(loc){
-  var m=st.meas&&st.meas[loc],a=IND&&IND[loc==='ben'?'beneden':'boven'],man=null,aut=null;
-  if(m&&m.at>0&&m.t>0)man={t:m.t,h:m.h>0?m.h:null,at:m.at,auto:false};
-  if(a&&typeof a.t==='number'&&typeof a.at==='number'&&a.t>0)aut={t:a.t,h:(typeof a.h==='number'?a.h:null),at:a.at,auto:true};
-  if(man&&aut)return aut.at>man.at?aut:man;
-  return man||aut;
-}
 function nowTemp(){
   var b=measRec('ben');
   if(b&&b.t>5&&b.t<40&&Date.now()-b.at<(b.auto?3:8)*3600000)return {t:b.t,at:b.at,auto:b.auto};
@@ -560,8 +531,8 @@ function parseNum(v){
 }
 function measLine(){
   var b=measRec('ben'),o=measRec('bov');
-  function part(n,r){return r?n+' '+nf(r.t,1)+' °C'+(r.h?' · '+nf(r.h,0)+'%':'')+' ('+clock(r.at)+')':n+' niet ingevuld';}
-  if(!b&&!o)return 'Binnen: nog niets ingevuld';
+  function part(n,r){return r?n+' '+nf(r.t,1)+' °C'+(r.h?' · '+nf(r.h,0)+'%':'')+' ('+clock(r.at)+')':n+' geen meting';}
+  if(!b&&!o)return 'Binnen: nog geen meting';
   return 'Binnen: '+part('beneden',b)+' · '+part('boven',o);
 }
 /* ---------- Ventilatieadvies op basis van luchtvochtigheid ---------- */
@@ -592,7 +563,7 @@ function ventAdvice(c){
 function ventHTML(c){
   var v=c.vent,h='<div class="card" id="vent-card"><h2>Ventileren</h2>';
   if(v.none){
-    return h+'<p class="muted" style="margin-top:6px">'+(v.stale?'Je metingen zijn ouder dan 12 uur.':'Nog geen luchtvochtigheid ingevuld.')+' Vul de waarden van je sensoren in, dan geef ik advies wanneer ventileren het meeste oplevert.</p><div class="mact"><button class="btn pri" type="button" data-open-meas="1">Binnen invullen</button></div></div>';
+    return h+'<p class="muted" style="margin-top:6px">'+(v.stale?'De laatste meting van de sensors is ouder dan 12 uur.':'Nog geen luchtvochtigheid van de sensors.')+' Zodra de sensors weer meten, geef ik advies wanneer ventileren het meeste oplevert. Bij Instellingen onder Metingen binnen zie je de status, en kun je zo nodig zelf een waarde invullen.</p></div>';
   }
   var cls={hoog:'b',verhoogd:'m',goed:'g',droog:'m'}[v.level], lab={hoog:'te vochtig',verhoogd:'aan de hoge kant',goed:'goed',droog:'droog'}[v.level];
   var kv='<div class="kv">';
@@ -1014,13 +985,13 @@ function sel(path,label,opts,hint){
   return '<label class="f">'+label+(hint?'<small>'+hint+'</small>':'')+'<select id="f-'+path.replace(/\./g,'-')+'" data-path="'+path+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(getPath(st,path))===String(o[0])?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select></label>';
 }
 function measCardHTML(){
-  var h='<div class="card" id="meas-card"><h2>Metingen binnen</h2><p class="muted small" style="margin-top:6px">Wat je bij het openen of hier invult. Hier controleer je welke waarden er zijn en wanneer ze zijn ingevuld. Handmatige waarden tellen 8 uur, een sensor 3 uur. Daarna gaat de app weer zelf rekenen.</p>'
+  var h='<div class="card" id="meas-card"><h2>Metingen binnen</h2><p class="muted small" style="margin-top:6px">De waarden komen van de sensors. Valt een sensor uit, dan kun je hier zelf een waarde invullen. Een sensorwaarde telt 3 uur, een handmatige waarde 8 uur. De nieuwste telt. Daarna gaat de app weer zelf rekenen.</p>'
     +'<table class="mtab"><thead><tr><th>Waar</th><th>Temperatuur</th><th>Vochtigheid</th><th>Ingevuld</th></tr></thead><tbody>';
   [['ben','Beneden'],['bov','Boven']].forEach(function(r){
     var m=st.meas[r[0]];
     h+='<tr><td>'+r[1]+'</td><td><input type="text" inputmode="decimal" id="f-m-'+r[0]+'-t" data-meas="'+r[0]+'.t" value="'+(m.t>0?nf(m.t,1):'')+'" placeholder="°C" aria-label="Temperatuur '+r[1].toLowerCase()+'"></td><td><input type="text" inputmode="decimal" id="f-m-'+r[0]+'-h" data-meas="'+r[0]+'.h" value="'+(m.h>0?nf(m.h,0):'')+'" placeholder="%" aria-label="Luchtvochtigheid '+r[1].toLowerCase()+'"></td><td id="ms-'+r[0]+'"></td></tr>';
   });
-  h+='</tbody></table><p class="msg err" id="meas-err" role="alert"></p><div class="mact"><button class="btn sm" type="button" data-open-meas="1">Invulscherm openen</button><button class="btn sm warn" type="button" id="meas-clear">Metingen wissen</button></div><div id="meas-sensor"></div></div>';
+  h+='</tbody></table><p class="msg err" id="meas-err" role="alert"></p><div class="mact"><button class="btn sm warn" type="button" id="meas-clear">Metingen wissen</button></div><div id="meas-sensor"></div></div>';
   return h;
 }
 function measStatus(){
@@ -1033,6 +1004,17 @@ function measStatus(){
     el.innerHTML=txt;
   });
   var ml=$('measline');if(ml)ml.textContent=measLine();
+  var ss=$('sensorstat');if(ss){var k=sensorState();ss.className='lvl '+k.c;ss.textContent=k.t;ss.title=k.d;}
+}
+/* Status van de koppeling met de sensors (indoor.json uit eWeLink). Vers = binnen 3 uur. */
+function sensorState(){
+  if(!IND)return {c:'b',t:'Sensors niet verbonden',d:'indoor.json is niet gevonden of niet te lezen.'};
+  var now=Date.now(),fresh=[],last=0,names={beneden:'beneden',boven:'boven'};
+  Object.keys(names).forEach(function(k){var a=IND[k];if(a&&typeof a.at==='number'){last=Math.max(last,a.at);if(now-a.at<3*3600000)fresh.push(k);}});
+  var d=last?'Laatste meting '+clock(last)+' ('+ageTxt(last)+').':'Nog geen meting ontvangen.';
+  if(fresh.length===2)return {c:'g',t:'✓ Sensors verbonden',d:d};
+  if(fresh.length===1)return {c:'m',t:'Sensor '+(fresh[0]==='beneden'?'boven':'beneden')+' geen recente meting',d:d};
+  return {c:'b',t:last?'Sensors: geen meting sinds '+clock(last):'Sensors niet verbonden',d:d};
 }
 function buildSettings(){
   var html='';
@@ -1094,49 +1076,11 @@ function buildSettings(){
 }
 
 /* ---------- Sturing ---------- */
-/* ---------- Invulscherm voor de metingen ---------- */
-var askedThisSession=false;
-function fieldVal(v,dec){return v>0?nf(v,dec).replace('.',','):'';}
-function openMeas(){
-  var b=lastRec('ben'),o=lastRec('bov');
-  $('mm-bt').value=b?fieldVal(b.t,1):'';$('mm-bh').value=b&&b.h?fieldVal(b.h,0):'';
-  $('mm-ot').value=o?fieldVal(o.t,1):'';$('mm-oh').value=o&&o.h?fieldVal(o.h,0):'';
-  $('mm-bs').textContent=b?'Laatste waarde: '+clock(b.at)+' ('+ageTxt(b.at)+')'+(b.auto?', van de sensor':'')+(Date.now()-b.at>(b.auto?3:8)*3600000?', controleer of die nog klopt':''):'Nog niet ingevuld.';
-  $('mm-os').textContent=o?'Laatste waarde: '+clock(o.at)+' ('+ageTxt(o.at)+')'+(o.auto?', van de sensor':'')+(Date.now()-o.at>(o.auto?3:8)*3600000?', controleer of die nog klopt':''):'Nog niet ingevuld.';
-  $('mm-err').textContent='';
-  $('meas-modal').hidden=false;
-  setTimeout(function(){try{$('mm-bt').focus();}catch(e){}},50);
-}
-function closeMeas(){$('meas-modal').hidden=true;}
-function storeMeas(loc,t,h){
-  var m=st.meas[loc];
-  m.t=t===null?0:t;m.h=h===null?0:h;m.at=(t===null&&h===null)?0:Date.now();
-}
-function saveMeas(){
-  var bt=parseNum($('mm-bt').value),bh=parseNum($('mm-bh').value),ot=parseNum($('mm-ot').value),oh=parseNum($('mm-oh').value),err='';
-  function badT(v){return v!==null&&(isNaN(v)||v<5||v>40);}
-  function badH(v){return v!==null&&(isNaN(v)||v<5||v>100);}
-  if(badT(bt)||badT(ot))err='Een temperatuur moet tussen 5 en 40 °C liggen.';
-  else if(badH(bh)||badH(oh))err='Een luchtvochtigheid moet tussen 5 en 100% liggen.';
-  else if((bt===null)!==(bh===null)||(ot===null)!==(oh===null))err='Vul bij beneden of boven zowel de temperatuur als de luchtvochtigheid in, of laat allebei leeg.';
-  if(err){$('mm-err').textContent=err;return;}
-  if(bt!==null||bh!==null)storeMeas('ben',bt,bh);
-  if(ot!==null||oh!==null)storeMeas('bov',ot,oh);
-  save();measRemoteSave();closeMeas();afterMeasChange();
-}
 function afterMeasChange(){
   cache={};
   var g=function(id){return $(id);};
   ['ben','bov'].forEach(function(l){var m=st.meas[l];var t=g('f-m-'+l+'-t'),h=g('f-m-'+l+'-h');if(t)t.value=m.t>0?nf(m.t,1):'';if(h)h.value=m.h>0?nf(m.h,0):'';});
   measStatus();renderActive();
-}
-function askAtOpen(){
-  if(askedThisSession)return;
-  askedThisSession=true;
-  var b=measRec('ben'),o=measRec('bov'),lim=60*60000,now=Date.now();
-  function ok(r){return r&&r.h&&now-r.at<lim;}
-  if(ok(b)&&ok(o))return;
-  openMeas();
 }
 function renderDays(){
   var s='';
@@ -1168,11 +1112,6 @@ function init(){
   measStatus();
   $('tabs').addEventListener('click',function(e){var b=e.target.closest('.tab');if(b)showTab(b.getAttribute('data-tab'));});
   $('days').addEventListener('click',function(e){var b=e.target.closest('button[data-day]');if(!b)return;ui.day=+b.getAttribute('data-day');saveUi();renderActive();});
-  $('measbtn').addEventListener('click',openMeas);
-  $('mm-save').addEventListener('click',saveMeas);
-  $('mm-skip').addEventListener('click',closeMeas);
-  $('meas-modal').addEventListener('keydown',function(e){if(e.key==='Escape')closeMeas();if(e.key==='Enter'&&e.target.tagName==='INPUT')saveMeas();});
-  document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-open-meas]'))openMeas();});
   $('p-instellingen').addEventListener('click',function(e){
     if(e.target.id==='meas-clear'){st.meas={ben:{t:0,h:0,at:0},bov:{t:0,h:0,at:0}};save();measRemoteSave();afterMeasChange();}
   });
@@ -1325,7 +1264,7 @@ function boot(d,s){
   try{if(s&&typeof s==='object'){DEF=merge(clone(DEF),s);st=clone(DEF);}}catch(e){}
   DAYS=buildDays();
   init();
-  measRemoteLoad().then(function(){afterMeasChange();setTimeout(askAtOpen,300);});
+  measRemoteLoad().then(function(){afterMeasChange();});
 }
 if(typeof fetch==='function'&&/^https?:$/.test(location.protocol)){
   Promise.all([getJson('data.json'),getJson('settings.json'),getJson('indoor.json'),getJson('outside.json')]).then(function(r){try{if(r[2]&&typeof r[2]==='object')IND=r[2];if(r[3]&&typeof r[3]==='object')OUT=r[3];}catch(e){}boot(r[0],r[1]);liveRefresh();});
