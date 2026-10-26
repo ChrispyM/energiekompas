@@ -8,7 +8,8 @@ Alleen standaardbibliotheek (Python 3.9+). Werkt met een gratis APP ID van dev.e
   python ewelink.py           schrijft indoor.json (zo draait het in GitHub Actions)
 
 Omgevingsvariabelen: EWELINK_APPID, EWELINK_APPSECRET, EWELINK_REGION (standaard eu), EWELINK_TOKENS,
-EWELINK_DEVICE_BENEDEN, EWELINK_DEVICE_BOVEN (apparaat-ID of naam), EWELINK_REDIRECT_URL.
+EWELINK_DEVICE_BENEDEN, EWELINK_DEVICE_BOVEN (apparaat-ID of naam), EWELINK_REDIRECT_URL,
+EWELINK_FORCE_REFRESH (true: tokens nu verversen, om het verversen te testen).
 Bronnen: github.com/coolkit-carl/eWeLink-API (OAuth2.0.md, UIIDProtocol.md) en github.com/nocmt/ewelink-api-next."""
 import base64, hashlib, hmac, http.server, json, os, secrets, subprocess, sys, time, urllib.error, urllib.parse, urllib.request, webbrowser
 
@@ -93,7 +94,7 @@ def load_tokens():
     mask(tok["at"], tok["rt"])
     if tok.get("rtExp", 0) and tok["rtExp"] < now_ms():
         raise Fout("de refresh token is verlopen. Draai op je computer: python ewelink.py --login")
-    if tok.get("atExp", 0) - now_ms() < REFRESH_BEFORE:
+    if tok.get("atExp", 0) - now_ms() < REFRESH_BEFORE or os.environ.get("EWELINK_FORCE_REFRESH") == "true":
         d = call(tok.get("region") or env("EWELINK_REGION", "eu"), "POST", "/v2/user/refresh", body={"rt": tok["rt"]})
         tok.update(at=d["at"], rt=d["rt"], atExp=now_ms() + 30 * DAY, rtExp=now_ms() + 60 * DAY)
         mask(tok["at"], tok["rt"])

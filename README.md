@@ -92,7 +92,7 @@ Ga naar **Actions**, **Gegevens verversen**, **Run workflow**. In de stap **Sens
 - het opslaan van de tokens mislukte;
 - je in een andere app met dezelfde APP ID bent ingelogd.
 
-Let op: in een openbare repository kan iedereen `indoor.json` lezen, en dus de temperatuur en vochtigheid in je huis. Volgens een niet-officiële bron is een gratis app van een particuliere ontwikkelaar maar 1 jaar geldig. Dan moet je hem daarna op dev.ewelink.cc opnieuw aanmaken.
+Let op: in een openbare repository kan iedereen `indoor.json` lezen, en dus de temperatuur en vochtigheid in je huis. Volgens eWeLink (Pricing.md in hun API-documentatie) is de gratis APP ID van een particuliere ontwikkelaar 1 jaar geldig. Dan moet je hem daarna op dev.ewelink.cc opnieuw aanmaken.
 
 ## Route A: GitHub Pages (aanbevolen)
 

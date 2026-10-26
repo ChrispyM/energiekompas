@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '7 * * * *'      # elk uur, op minuut 7
   workflow_dispatch:         # ook met de hand te starten
+    inputs:
+      ververs:
+        description: 'eWeLink-tokens nu verversen (test)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -28,6 +33,7 @@ jobs:
           EWELINK_REGION: ${{ secrets.EWELINK_REGION || 'eu' }}
           EWELINK_DEVICE_BENEDEN: ${{ secrets.EWELINK_DEVICE_BENEDEN }}
           EWELINK_DEVICE_BOVEN: ${{ secrets.EWELINK_DEVICE_BOVEN }}
+          EWELINK_FORCE_REFRESH: ${{ inputs.ververs }}
         run: python ewelink.py
       - name: Vastleggen als er iets veranderd is
         run: |
