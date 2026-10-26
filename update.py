@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Haalt weer (KNMI HARMONIE via Open-Meteo, met MET Norway als reserve) en EPEX day-ahead prijzen (Energy-Charts) op en schrijft data.json.
+"""Haalt weer (KNMI HARMONIE via Open-Meteo, met MET Norway als reserve) en EPEX day-ahead prijzen (Energy-Charts) en
+de gasprijs van de beurs (EnergyZero) op en schrijft data.json.
 Alleen standaardbibliotheek (Python 3.9+). Draai dit elke dag rond 13:30, dan zijn de prijzen van morgen bekend."""
 import json, os, sys, time, urllib.request, urllib.parse
 from datetime import datetime, timedelta, timezone
@@ -120,6 +121,22 @@ def fetch_epex(now_utc):
     j = get_json("https://api.energy-charts.info/price?" + q)
     return hourly_prices(j["unix_seconds"], j["price"])
 
+def fetch_gas(now_utc):
+    """Gasprijs van de beurs per m3, excl. btw, zonder belasting en opslag. Staat vast per dag, nieuw om 05:00 UTC."""
+    f = lambda dt: dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    q = urllib.parse.urlencode({"fromDate": f(now_utc - timedelta(days=1)), "tillDate": f(now_utc),
+                                "interval": 4, "usageType": 2, "inclBtw": "false"})
+    j = get_json("https://api.energyzero.nl/v1/energyprices?" + q)
+    now = []
+    for p in j["Prices"]:
+        at = datetime.fromisoformat(p["readingDate"].replace("Z", "+00:00"))
+        if at <= now_utc:
+            now.append((at, float(p["price"])))
+    if not now:
+        raise ValueError("geen gasprijs voor nu")
+    at, v = max(now)
+    return {"v": round(v, 3), "at": int(at.timestamp() * 1000), "stamp": stamp(now_utc)}
+
 def main():
     now_utc = datetime.now(timezone.utc)
     try:
@@ -154,6 +171,11 @@ def main():
         new["epex"] = ep
     except Exception as e:
         errors.append("prijzen: %s" % e)
+    new.pop("ttf", None)                  # oude, niet bijgewerkte waarde
+    try:
+        new["gas"] = fetch_gas(now_utc)
+    except Exception as e:
+        errors.append("gasprijs: %s" % e)
     if "temp" not in new:
         print("Geen weerdata beschikbaar, data.json niet geschreven.", file=sys.stderr)
         for e in errors:

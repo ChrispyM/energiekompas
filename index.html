@@ -841,6 +841,7 @@ function renderOverview(){
     +(function(){if(OUT&&typeof OUT.t==='number'&&typeof OUT.at==='number'&&Date.now()-OUT.at<3*3600000){var fx=c.day.hours[Math.min(23,Math.max(0,localOf(OUT.at).h))];return stat('Buiten nu, '+esc(OUT.name||'meetstation'),nf(OUT.t,0)+' °C','gemeten '+clock(OUT.at)+(c.minH>0&&fx?', verwachting '+nf(fx.temp,0)+' °C':''));}return '';})()
     +stat('Buitentemperatuur',nf(c.tmin,0)+' tot '+nf(c.tmax,0)+' °C','binnen ± '+nf(st.tset,1)+' °C')
     +stat('Stroomprijs',eur(c.pmin)+' tot '+eur(c.pmax),(c.src==='own'?'eigen prijzen':(c.src==='epex'?'EPEX day-ahead':'indicatief profiel')))
+    +gasStat()
     +stat('Teruglevering',eur(fiMin)+' tot '+eur(fiMax),(st.fimode==='dyn'?'volgt de beurs':'vast bedrag')+(nNeg?', '+nNeg+' uur negatief':''))
     +'</div>';
   html+='<div class="card"><h2>Waar zit het voordeel per uur?</h2><p class="muted small">Groen is het goedkoopst om stroom te gebruiken, rood het duurst. Zon op je eigen dak telt mee.</p>'
@@ -897,6 +898,12 @@ function indoorStat(){
   });
   if(!any)return '';
   return '<div class="stat instat"><div class="lbl">Binnen nu</div>'+h+'<div class="sub">temperatuur · vochtigheid · gemeten</div></div>';
+}
+/* Tegel Gasprijs: beursprijs van vandaag uit data.json (EnergyZero), excl. btw. */
+function gasStat(){
+  var g=SNAP.gas;
+  if(!g||typeof g.v!=='number'||typeof g.at!=='number'||Date.now()-g.at>36*3600000)return '';
+  return stat('Gasprijs beurs',eur(g.v)+' /m³','excl. btw, '+eur(g.v*1.21)+' met btw · prijs per dag');
 }
 function stat(l,v,s){return '<div class="stat"><div class="lbl">'+l+'</div><div class="val">'+v+'</div><div class="sub">'+s+'</div></div>';}
 
@@ -1172,7 +1179,7 @@ function getJson(url){
 }
 function applyData(d){
   if(!d||typeof d!=='object'||typeof d.start!=='number'||!Array.isArray(d.temp)||!Array.isArray(d.cloud)||d.temp.length!==d.cloud.length||d.temp.length<24)return;
-  ['start','stamp','temp','cloud','ghi','dni','dhi','rh','src','epex','epexStamp','ttf','fetched'].forEach(function(k){if(d[k]!==undefined)SNAP[k]=d[k];});
+  ['start','stamp','temp','cloud','ghi','dni','dhi','rh','src','epex','epexStamp','gas','fetched'].forEach(function(k){if(d[k]!==undefined)SNAP[k]=d[k];});
   ['ghi','dni','dhi','rh'].forEach(function(k){if(SNAP[k]&&(!Array.isArray(SNAP[k])||SNAP[k].length!==SNAP.temp.length||SNAP[k].some(function(v){return typeof v!=='number'||!isFinite(v);}))){if(k==='rh')delete SNAP.rh;else{delete SNAP.ghi;delete SNAP.dni;delete SNAP.dhi;}}});
   if(typeof d.lat==='number'&&typeof d.lon==='number'){LAT=d.lat;LON=d.lon;}
 }
