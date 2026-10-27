@@ -915,7 +915,7 @@ function indoorStat(){
 }
 /* 24-uursgrafiek in de tegel Binnen nu, uit indoor-history.json: per verdieping [ms, t, h].
    Twee kleine grafieken (temperatuur, vochtigheid), elk met een eigen as; samen één cursor. */
-var HIST=null,HV=null,HLOC=[['beneden','Beneden','var(--ben)'],['boven','Boven','var(--bov)']],HGAP=4*3600000;
+var HIST=null,HV=null,HLOC=[['beneden','Beneden','var(--ben)'],['boven','Boven','var(--bov)']];
 function histHTML(){
   HV=null;
   if(!HIST)return '';
@@ -942,8 +942,9 @@ function histSvg(idx,w){
   var d=new Date(HV.t0);d.setMinutes(0,0,0);d.setHours(Math.ceil((d.getHours()+(HV.t0>d.getTime()?1:0))/6)*6);
   for(var m=d.getTime();m<HV.t1;m+=6*3600000){var x=X(m);if(x>ml+12&&x<w-mr-12)s+='<text class="tick" x="'+x+'" y="'+(h-4)+'" text-anchor="middle">'+clock(m)+'</text>';}
   HLOC.forEach(function(l){
-    var rows=HV.s[l[0]].filter(function(r){return typeof r[idx]==='number';}),p='',prev=null;
-    rows.forEach(function(r){p+=(prev===null||r[0]-prev>HGAP?'M':'L')+X(Math.min(r[0],HV.t1)).toFixed(1)+','+Y(r[idx]).toFixed(1);prev=r[0];});
+    var rows=HV.s[l[0]].filter(function(r){return typeof r[idx]==='number';}),p='';
+    /* De sensors melden alleen bij verandering: een meting geldt tot de volgende, dus de lijn loopt altijd door. */
+    rows.forEach(function(r,k){p+=(k?'L':'M')+X(Math.min(r[0],HV.t1)).toFixed(1)+','+Y(r[idx]).toFixed(1);});
     if(p)s+='<path d="'+p+'" fill="none" style="stroke:'+l[2]+';stroke-width:2" stroke-linejoin="round" stroke-linecap="round"/>';
     var last=rows[rows.length-1];
     if(last)s+='<circle cx="'+X(Math.min(last[0],HV.t1)).toFixed(1)+'" cy="'+Y(last[idx]).toFixed(1)+'" r="3" style="fill:'+l[2]+';stroke:var(--panel);stroke-width:2"/>';
@@ -951,13 +952,13 @@ function histSvg(idx,w){
   s+='<line class="hcur" visibility="hidden" x1="0" x2="0" y1="'+mt+'" y2="'+(mt+ph)+'" style="stroke:var(--ink);stroke-width:1.5"/>';
   return s+'</svg>';
 }
-/* Cursor: dichtstbijzijnde meting per verdieping (binnen 45 min), in beide grafieken tegelijk. */
+/* Cursor: per verdieping de meting die op dat moment gold (de laatste ervoor), in beide grafieken tegelijk. */
 function histBind(root){
   if(!HV)return;
   root.querySelectorAll('.hist[data-i]').forEach(function(el){el.insertAdjacentHTML('beforeend',histSvg(+el.dataset.i,Math.max(220,Math.floor(el.clientWidth))));});
   var svgs=root.querySelectorAll('.hist svg'),rd=root.querySelector('.hread'),cur=null;
   if(!svgs.length||!rd)return;
-  function near(rows,ms){var b=null;rows.forEach(function(r){if(Math.abs(r[0]-ms)<=2700000&&(!b||Math.abs(r[0]-ms)<Math.abs(b[0]-ms)))b=r;});return b;}
+  function near(rows,ms){var b=null;rows.forEach(function(r){if(r[0]<=ms)b=r;});return b;}
   function show(ms){
     cur=ms;
     svgs.forEach(function(sv){var ml=+sv.dataset.ml,pw=+sv.dataset.pw,x=ml+(ms-HV.t0)/(HV.t1-HV.t0)*pw,ln=sv.querySelector('.hcur');ln.setAttribute('x1',x);ln.setAttribute('x2',x);ln.setAttribute('visibility','visible');});
