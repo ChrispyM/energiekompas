@@ -21,7 +21,7 @@
   --accent:#0C6E73; --accent-ink:#FFFFFF;
   --sun:#D98E04; --sun-soft:#F3D58E;
   --good:#1B8F61; --good-bg:#CDEBDC; --mid:#A87B0A; --mid-bg:#F3E4B5; --bad:#BF4430; --bad-bg:#F3CFC6;
-  --out:#2A66CC; --in:#C2410C; --cloud:#B7C5CB;
+  --out:#2A66CC; --in:#C2410C; --cloud:#B7C5CB; --ben:#1BAF7A; --bov:#6250D6;
   --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
   --f-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
   --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
@@ -32,7 +32,7 @@
     --accent:#4FC3BB; --accent-ink:#06181A;
     --sun:#F2B33D; --sun-soft:#5C4713;
     --good:#46C791; --good-bg:#14402F; --mid:#E1B84A; --mid-bg:#463A12; --bad:#F0806B; --bad-bg:#4A2219;
-    --out:#6FA4FF; --in:#FF9B62; --cloud:#3A4F57;
+    --out:#6FA4FF; --in:#FF9B62; --cloud:#3A4F57; --ben:#199E70; --bov:#9085E9;
     color-scheme:dark;
   }
 }
@@ -41,7 +41,7 @@
   --accent:#4FC3BB; --accent-ink:#06181A;
   --sun:#F2B33D; --sun-soft:#5C4713;
   --good:#46C791; --good-bg:#14402F; --mid:#E1B84A; --mid-bg:#463A12; --bad:#F0806B; --bad-bg:#4A2219;
-  --out:#6FA4FF; --in:#FF9B62; --cloud:#3A4F57;
+  --out:#6FA4FF; --in:#FF9B62; --cloud:#3A4F57; --ben:#199E70; --bov:#9085E9;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -83,7 +83,19 @@ section[hidden],[hidden]{display:none!important}
 .inrow .val,.inrow .sub{margin-top:0}
 .inloc{font-size:13px;font-weight:600}
 .inh{font-family:var(--f-mono);font-size:16px;font-variant-numeric:tabular-nums;color:var(--muted)}
-.instat>.sub{margin-top:8px;font-size:11.5px}
+.instat .inmain>.sub{margin-top:8px;font-size:11.5px}
+.instat.hashist{grid-column:1/-1;display:grid;grid-template-columns:minmax(230px,1.1fr) 1fr 1fr;column-gap:20px;align-items:start}
+.instat.hashist .hread{grid-column:2/-1}
+@media (max-width:720px){.instat.hashist{grid-template-columns:1fr}.instat.hashist .hread{grid-column:auto}.instat.hashist .hist{margin-top:12px}}
+.inloc i{display:inline-block;width:12px;height:2px;border-radius:1px;margin-right:6px;vertical-align:3px}
+.hist{min-width:0}
+.hist h4{margin:0;font-size:11.5px;font-weight:600;color:var(--muted)}
+.hist svg{display:block;margin-top:4px;touch-action:pan-y;cursor:ew-resize;-webkit-user-select:none;user-select:none}
+.hist svg:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.hread{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline;margin-top:6px;font-size:12.5px;min-height:20px;color:var(--muted)}
+.hread b{font:600 13px var(--f-mono);color:var(--ink)}
+.hread i{display:inline-block;width:12px;height:2px;border-radius:1px;margin-right:5px;vertical-align:3px}
+.hread em{font:500 12.5px var(--f-mono);font-style:normal;color:var(--ink)}
 .strip{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;margin-top:10px}
 .cell{height:30px;border-radius:3px;background:var(--panel2);display:flex;align-items:flex-end;justify-content:center;font:500 9.5px var(--f-mono);color:var(--muted);padding-bottom:2px}
 .cell.c0{background:var(--good-bg);color:var(--good)}
@@ -239,7 +251,7 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
 <div class="card guide">
 <h2>Wat de app niet weet</h2>
 <ul class="tip">
-<li>Hij ziet je P1-meter en je Enphase-omvormer niet rechtstreeks. De sensors binnen komen via eWeLink, met maximaal een uur vertraging.</li>
+<li>Hij ziet je P1-meter en je Enphase-omvormer niet rechtstreeks. De sensors binnen komen via eWeLink, met ongeveer 10 tot 20 minuten vertraging.</li>
 <li>De leveranciersopslag, je werkelijke warmteverlies en de COP van je warmtepomp zijn schattingen. Zie het als richting.</li>
 <li>De binnentemperatuur in de grafiek is een berekening, geen meting, tenzij de sensor beneden de afgelopen 3 uur iets heeft gemeld.</li>
 <li>Het buitenweer komt uit een verwachting. Bij plotselinge wolken of regen kan de zonopbrengst afwijken.</li>
@@ -869,6 +881,7 @@ function renderOverview(){
   html+=ventHTML(c);
   html+='<div class="card"><h2>Wat nu te doen</h2><ul class="tip">'+tips.map(function(t){return '<li>'+t+'</li>';}).join('')+'</ul></div>';
   el.innerHTML=html;
+  histBind(el);
   var lo=Math.min(0,c.pmin,fiMin), pr=niceTicks(lo*1.05,Math.max(c.pmax,fiMax)*1.05,4);
   chart($('ch-price'),{label:'Stroomprijs en terugleverprijs per uur',L:{min:pr.min,max:pr.max,ticks:pr.ticks,fmt:function(v){return nf(v,2);}},
     series:[{type:'bar',n:'Prijs',f:function(v){return eur(v,3)+'/kWh';},v:c.price,color:function(k){return c.cls[k]===0?'var(--good)':(c.cls[k]===1?'var(--mid)':'var(--bad)');}},
@@ -888,16 +901,95 @@ function renderOverview(){
 }
 /* Tegel Binnen nu: per verdieping temperatuur en vochtigheid, met meettijd. */
 function indoorStat(){
-  var rows=[['Beneden',measRec('ben')],['Boven',measRec('bov')]],any=false,h='';
+  var rows=[['Beneden',measRec('ben'),'var(--ben)'],['Boven',measRec('bov'),'var(--bov)']],any=false,h='';
   rows.forEach(function(r){
     var x=r[1],ok=x&&Date.now()-x.at<(x.auto?3:8)*3600000;
     if(ok)any=true;
-    h+='<div class="inrow"><span class="inloc">'+r[0]+'</span>'
+    h+='<div class="inrow"><span class="inloc"><i style="background:'+r[2]+'"></i>'+r[0]+'</span>'
       +(ok?'<span class="val">'+nf(x.t,1)+' °C</span><span class="inh">'+(x.h?nf(x.h,0)+'%':'')+'</span><span class="sub">'+clock(x.at)+'</span>'
           :'<span class="sub">geen recente meting</span>')+'</div>';
   });
   if(!any)return '';
-  return '<div class="stat instat"><div class="lbl">Binnen nu</div>'+h+'<div class="sub">temperatuur · vochtigheid · gemeten</div></div>';
+  var hs=histHTML();
+  return '<div class="stat instat'+(hs?' hashist':'')+'"><div class="inmain"><div class="lbl">Binnen nu</div>'+h+'<div class="sub">temperatuur · vochtigheid · gemeten</div></div>'+hs+'</div>';
+}
+/* 24-uursgrafiek in de tegel Binnen nu, uit indoor-history.json: per verdieping [ms, t, h].
+   Twee kleine grafieken (temperatuur, vochtigheid), elk met een eigen as; samen één cursor. */
+var HIST=null,HV=null,HLOC=[['beneden','Beneden','var(--ben)'],['boven','Boven','var(--bov)']],HGAP=4*3600000;
+function histHTML(){
+  HV=null;
+  if(!HIST)return '';
+  var t1=Date.now(),t0=t1-24*3600000,s={},n=0;
+  HLOC.forEach(function(l){s[l[0]]=(HIST[l[0]]||[]).filter(function(r){return r[0]>=t0&&r[0]<=t1+600000&&typeof r[1]==='number';});if(s[l[0]].length>1)n++;});
+  if(!n)return '';
+  HV={t0:t0,t1:t1,s:s};
+  return '<div class="hist" data-i="1"><h4>Temperatuur, laatste 24 uur</h4></div>'
+    +'<div class="hist" data-i="2"><h4>Luchtvochtigheid, laatste 24 uur</h4></div>'
+    +'<div class="hread" aria-live="polite"></div>';
+}
+var HCFG={1:[0.4,function(v){return nf(v,0)+'°';},'Temperatuur beneden en boven, laatste 24 uur'],
+          2:[3,function(v){return nf(v,0)+'%';},'Luchtvochtigheid beneden en boven, laatste 24 uur']};
+function histSvg(idx,w){
+  var padV=HCFG[idx][0],fmt=HCFG[idx][1],label=HCFG[idx][2];
+  var h=96,ml=32,mr=6,mt=6,mb=17,pw=w-ml-mr,ph=h-mt-mb,vals=[];
+  HLOC.forEach(function(l){HV.s[l[0]].forEach(function(r){if(typeof r[idx]==='number')vals.push(r[idx]);});});
+  if(vals.length<2)return '';
+  var sc=niceTicks(Math.min.apply(null,vals)-padV,Math.max.apply(null,vals)+padV,2);
+  function X(ms){return ml+(ms-HV.t0)/(HV.t1-HV.t0)*pw;}
+  function Y(v){return mt+ph-(v-sc.min)/(sc.max-sc.min)*ph;}
+  var s='<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" role="img" aria-label="'+esc(label)+'" tabindex="0" data-ml="'+ml+'" data-pw="'+pw+'">';
+  sc.ticks.forEach(function(t){var y=Y(t);s+='<line class="grid" x1="'+ml+'" x2="'+(w-mr)+'" y1="'+y+'" y2="'+y+'"/><text class="tick" x="'+(ml-5)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(t)+'</text>';});
+  var d=new Date(HV.t0);d.setMinutes(0,0,0);d.setHours(Math.ceil((d.getHours()+(HV.t0>d.getTime()?1:0))/6)*6);
+  for(var m=d.getTime();m<HV.t1;m+=6*3600000){var x=X(m);if(x>ml+12&&x<w-mr-12)s+='<text class="tick" x="'+x+'" y="'+(h-4)+'" text-anchor="middle">'+clock(m)+'</text>';}
+  HLOC.forEach(function(l){
+    var rows=HV.s[l[0]].filter(function(r){return typeof r[idx]==='number';}),p='',prev=null;
+    rows.forEach(function(r){p+=(prev===null||r[0]-prev>HGAP?'M':'L')+X(Math.min(r[0],HV.t1)).toFixed(1)+','+Y(r[idx]).toFixed(1);prev=r[0];});
+    if(p)s+='<path d="'+p+'" fill="none" style="stroke:'+l[2]+';stroke-width:2" stroke-linejoin="round" stroke-linecap="round"/>';
+    var last=rows[rows.length-1];
+    if(last)s+='<circle cx="'+X(Math.min(last[0],HV.t1)).toFixed(1)+'" cy="'+Y(last[idx]).toFixed(1)+'" r="3" style="fill:'+l[2]+';stroke:var(--panel);stroke-width:2"/>';
+  });
+  s+='<line class="hcur" visibility="hidden" x1="0" x2="0" y1="'+mt+'" y2="'+(mt+ph)+'" style="stroke:var(--ink);stroke-width:1.5"/>';
+  return s+'</svg>';
+}
+/* Cursor: dichtstbijzijnde meting per verdieping (binnen 45 min), in beide grafieken tegelijk. */
+function histBind(root){
+  if(!HV)return;
+  root.querySelectorAll('.hist[data-i]').forEach(function(el){el.insertAdjacentHTML('beforeend',histSvg(+el.dataset.i,Math.max(220,Math.floor(el.clientWidth))));});
+  var svgs=root.querySelectorAll('.hist svg'),rd=root.querySelector('.hread'),cur=null;
+  if(!svgs.length||!rd)return;
+  function near(rows,ms){var b=null;rows.forEach(function(r){if(Math.abs(r[0]-ms)<=2700000&&(!b||Math.abs(r[0]-ms)<Math.abs(b[0]-ms)))b=r;});return b;}
+  function show(ms){
+    cur=ms;
+    svgs.forEach(function(sv){var ml=+sv.dataset.ml,pw=+sv.dataset.pw,x=ml+(ms-HV.t0)/(HV.t1-HV.t0)*pw,ln=sv.querySelector('.hcur');ln.setAttribute('x1',x);ln.setAttribute('x2',x);ln.setAttribute('visibility','visible');});
+    rd.textContent='';
+    var b=document.createElement('b');b.textContent=clock(ms);rd.appendChild(b);
+    HLOC.forEach(function(l){
+      var r=near(HV.s[l[0]],ms),sp=document.createElement('span'),i=document.createElement('i'),em=document.createElement('em');
+      i.style.background=l[2];sp.appendChild(i);sp.appendChild(document.createTextNode(l[1]+' '));
+      em.textContent=r?nf(r[1],1)+' °C'+(typeof r[2]==='number'?' · '+nf(r[2],0)+'%':''):'geen meting';
+      sp.appendChild(em);rd.appendChild(sp);
+    });
+  }
+  function hide(){cur=null;svgs.forEach(function(sv){sv.querySelector('.hcur').setAttribute('visibility','hidden');});rd.textContent='Beweeg over de grafiek of tik erop voor eerdere waarden.';}
+  function at(sv,ev){
+    var r=sv.getBoundingClientRect(),vb=sv.viewBox.baseVal.width,fx=(ev.clientX-r.left)*(vb/Math.max(1,r.width));
+    var f=Math.max(0,Math.min(1,(fx-(+sv.dataset.ml))/(+sv.dataset.pw)));
+    show(HV.t0+f*(HV.t1-HV.t0));
+  }
+  svgs.forEach(function(sv){
+    var down=false;
+    sv.addEventListener('pointerdown',function(ev){down=true;try{sv.setPointerCapture(ev.pointerId);}catch(e){}at(sv,ev);});
+    sv.addEventListener('pointermove',function(ev){if(down||ev.pointerType==='mouse')at(sv,ev);});
+    sv.addEventListener('pointerup',function(){down=false;});
+    sv.addEventListener('pointercancel',function(){down=false;});
+    sv.addEventListener('pointerleave',function(ev){if(ev.pointerType==='mouse')hide();});
+    sv.addEventListener('keydown',function(ev){
+      var ms=cur===null?HV.t1:cur;
+      if(ev.key==='ArrowRight'){show(Math.min(HV.t1,ms+1800000));ev.preventDefault();}
+      else if(ev.key==='ArrowLeft'){show(Math.max(HV.t0,ms-1800000));ev.preventDefault();}
+    });
+  });
+  hide();
 }
 /* Tegel Gasprijs: beursprijs van vandaag uit data.json (EnergyZero), excl. btw. */
 function gasStat(){
@@ -1293,10 +1385,10 @@ function boot(d,s){
   measRemoteLoad().then(function(){afterMeasChange();});
 }
 if(typeof fetch==='function'&&/^https?:$/.test(location.protocol)){
-  Promise.all([getJson('data.json'),getJson('settings.json'),getJson('indoor.json'),getJson('outside.json')]).then(function(r){try{if(r[2]&&typeof r[2]==='object')IND=r[2];if(r[3]&&typeof r[3]==='object')OUT=r[3];}catch(e){}boot(r[0],r[1]);liveRefresh();});
+  Promise.all([getJson('data.json'),getJson('settings.json'),getJson('indoor.json'),getJson('outside.json'),getJson('indoor-history.json')]).then(function(r){try{if(r[2]&&typeof r[2]==='object')IND=r[2];if(r[3]&&typeof r[3]==='object')OUT=r[3];if(r[4]&&typeof r[4]==='object')HIST=r[4];}catch(e){}boot(r[0],r[1]);liveRefresh();});
   setInterval(function(){if(booted)liveRefresh();},1800000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden&&booted&&SNAP.fetched&&Date.now()-SNAP.fetched>1200000)liveRefresh();});
-  setInterval(function(){Promise.all([getJson('indoor.json'),getJson('outside.json')]).then(function(r){if(!booted)return;if(r[0]&&typeof r[0]==='object')IND=r[0];if(r[1]&&typeof r[1]==='object')OUT=r[1];measStatus();renderActive();});},300000);
+  setInterval(function(){Promise.all([getJson('indoor.json'),getJson('outside.json'),getJson('indoor-history.json')]).then(function(r){if(!booted)return;if(r[0]&&typeof r[0]==='object')IND=r[0];if(r[1]&&typeof r[1]==='object')OUT=r[1];if(r[2]&&typeof r[2]==='object')HIST=r[2];measStatus();renderActive();});},300000);
   setTimeout(function(){boot();liveRefresh();},2500);
 }else boot();
 })();

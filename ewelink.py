@@ -15,8 +15,10 @@ import base64, hashlib, hmac, http.server, json, os, secrets, subprocess, sys, t
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "indoor.json")
+HIST = os.path.join(HERE, "indoor-history.json")
 REDIRECT = os.environ.get("EWELINK_REDIRECT_URL") or "http://127.0.0.1:8000/redirectUrl"
 DAY = 86400000
+HIST_KEEP = 26 * 3600000             # geschiedenis voor de 24-uursgrafiek, met wat marge
 REFRESH_BEFORE = 10 * DAY            # access token (30 dagen geldig) verversen als hij binnen 10 dagen verloopt
 
 class Fout(Exception):
@@ -222,11 +224,29 @@ def write(devs):
         if t is None:
             raise Fout("sensor %s (%s): %s" % (loc, d.get("name"), why))
         res[loc] = {"t": t, "h": h, "at": at}
-    tmp = OUT + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(res, f, separators=(",", ":"))
-    os.replace(tmp, OUT)
+    save(OUT, res)
     print("indoor.json geschreven: beneden %.1f °C, boven %.1f °C." % (res["beneden"]["t"], res["boven"]["t"]))
+    history(res)
+
+def save(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(data, f, separators=(",", ":"))
+    os.replace(tmp, path)
+
+def history(res):
+    """Voegt de metingen toe aan indoor-history.json: per verdieping [ms, t, h], de laatste 26 uur, zonder dubbele tijden."""
+    try:
+        with open(HIST) as f:
+            hist = json.load(f)
+    except (OSError, ValueError):
+        hist = {}
+    keep = now_ms() - HIST_KEEP
+    for loc, r in res.items():
+        rows = {row[0]: row for row in hist.get(loc, []) if row[0] >= keep}
+        rows[r["at"]] = [r["at"], r["t"], r["h"]]
+        hist[loc] = sorted(rows.values())
+    save(HIST, hist)
 
 def main():
     args = sys.argv[1:]
