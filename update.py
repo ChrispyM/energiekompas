@@ -140,7 +140,7 @@ def fetch_gas(now_utc):
 HIST_OUT = os.path.join(HERE, "prices-history.json")
 
 def day_minmax(unix, price):
-    """Per lokale dag de laagste en hoogste uurprijs (€/MWh). Dagen met minder dan 20 uren vallen af;
+    """Per lokale dag de laagste en hoogste uurprijs en het daggemiddelde (€/MWh). Dagen met minder dan 20 uren vallen af;
     zo tellen de dagen van de zomertijdwissel (23 of 25 uur) wel mee."""
     days = {}
     for u, p in zip(unix, price):
@@ -153,7 +153,7 @@ def day_minmax(unix, price):
         if len(hours) < 20:
             continue
         avg = [sum(v) / len(v) for v in hours.values()]
-        out[k] = [round(min(avg), 2), round(max(avg), 2)]
+        out[k] = [round(min(avg), 2), round(max(avg), 2), round(sum(avg) / len(avg), 2)]
     return out
 
 def gas_days(prices):
@@ -165,7 +165,7 @@ def gas_days(prices):
     return out
 
 def update_history(now_utc):
-    """prices-history.json: per dag de gasprijs (beurs, excl. btw) en de laagste en hoogste stroomprijs (EPEX).
+    """prices-history.json: per dag de gasprijs (beurs, excl. btw) en de laagste, hoogste en gemiddelde stroomprijs (EPEX).
     Een jaar terug. Is de reeks nog niet compleet, dan haal ik het hele jaar op, anders alleen de laatste dagen."""
     try:
         old = json.load(open(HIST_OUT))
@@ -174,7 +174,8 @@ def update_history(now_utc):
     today = now_utc.astimezone(TZ).date()
     first = today - timedelta(days=365)
     gas, power = dict(old.get("gas") or {}), dict(old.get("power") or {})
-    full = len(power) < 350 or len(gas) < 350 or min(power) > (first + timedelta(days=7)).isoformat()
+    full = (len(power) < 350 or len(gas) < 350 or min(power) > (first + timedelta(days=7)).isoformat()
+            or any(len(v) < 3 for v in power.values()))
     since = first if full else today - timedelta(days=4)
     errors = []
     try:
