@@ -137,6 +137,68 @@ def fetch_gas(now_utc):
     at, v = max(now)
     return {"v": round(v, 3), "at": int(at.timestamp() * 1000), "stamp": stamp(now_utc)}
 
+HIST_OUT = os.path.join(HERE, "prices-history.json")
+
+def day_minmax(unix, price):
+    """Per lokale dag de laagste en hoogste uurprijs (€/MWh). Dagen met minder dan 20 uren vallen af;
+    zo tellen de dagen van de zomertijdwissel (23 of 25 uur) wel mee."""
+    days = {}
+    for u, p in zip(unix, price):
+        if p is None:
+            continue
+        dt = datetime.fromtimestamp(u, timezone.utc).astimezone(TZ)
+        days.setdefault(dt.strftime("%Y-%m-%d"), {}).setdefault(dt.hour, []).append(float(p))
+    out = {}
+    for k, hours in days.items():
+        if len(hours) < 20:
+            continue
+        avg = [sum(v) / len(v) for v in hours.values()]
+        out[k] = [round(min(avg), 2), round(max(avg), 2)]
+    return out
+
+def gas_days(prices):
+    """EnergyZero geeft de gasprijs per uur; hij wisselt om 06:00 lokale tijd. Eén waarde per gasdag."""
+    out = {}
+    for p in prices:
+        at = datetime.fromisoformat(p["readingDate"].replace("Z", "+00:00")).astimezone(TZ)
+        out[(at - timedelta(hours=6)).strftime("%Y-%m-%d")] = round(float(p["price"]), 3)
+    return out
+
+def update_history(now_utc):
+    """prices-history.json: per dag de gasprijs (beurs, excl. btw) en de laagste en hoogste stroomprijs (EPEX).
+    Een jaar terug. Is de reeks nog niet compleet, dan haal ik het hele jaar op, anders alleen de laatste dagen."""
+    try:
+        old = json.load(open(HIST_OUT))
+    except Exception:
+        old = {}
+    today = now_utc.astimezone(TZ).date()
+    first = today - timedelta(days=365)
+    gas, power = dict(old.get("gas") or {}), dict(old.get("power") or {})
+    full = len(power) < 350 or len(gas) < 350 or min(power) > (first + timedelta(days=7)).isoformat()
+    since = first if full else today - timedelta(days=4)
+    errors = []
+    try:
+        q = urllib.parse.urlencode({"bzn": "NL", "start": since.isoformat(), "end": (today + timedelta(days=1)).isoformat()})
+        j = get_json("https://api.energy-charts.info/price?" + q)
+        power.update(day_minmax(j["unix_seconds"], j["price"]))
+    except Exception as e:
+        errors.append("stroomhistorie: %s" % e)
+    try:
+        f = lambda d: datetime(d.year, d.month, d.day, tzinfo=TZ).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        q = urllib.parse.urlencode({"fromDate": f(since), "tillDate": now_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                                    "interval": 4, "usageType": 2, "inclBtw": "false"})
+        gas.update(gas_days(get_json("https://api.energyzero.nl/v1/energyprices?" + q)["Prices"]))
+    except Exception as e:
+        errors.append("gashistorie: %s" % e)
+    keep = lambda d: {k: d[k] for k in sorted(d) if k >= first.isoformat()}
+    new = {"gas": keep(gas), "power": keep(power)}
+    if new != {"gas": old.get("gas"), "power": old.get("power")}:
+        tmp = HIST_OUT + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(new, fh, separators=(",", ":"))
+        os.replace(tmp, HIST_OUT)
+    return errors
+
 def main():
     now_utc = datetime.now(timezone.utc)
     try:
@@ -176,6 +238,7 @@ def main():
         new["gas"] = fetch_gas(now_utc)
     except Exception as e:
         errors.append("gasprijs: %s" % e)
+    errors += update_history(now_utc)
     if "temp" not in new:
         print("Geen weerdata beschikbaar, data.json niet geschreven.", file=sys.stderr)
         for e in errors:

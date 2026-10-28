@@ -89,6 +89,10 @@ section[hidden],[hidden]{display:none!important}
 @media (max-width:720px){.instat.hashist{grid-template-columns:1fr}.instat.hashist .hread{grid-column:auto}.instat.hashist .hist{margin-top:12px}}
 .inloc i{display:inline-block;width:12px;height:2px;border-radius:1px;margin-right:6px;vertical-align:3px}
 .hist{min-width:0}
+.pstat{grid-column:span 2}
+.pstat .hist{margin-top:10px}
+.pstat .legend{margin-top:6px;font-size:12px}
+.pstat .legend i{width:12px;height:2px;border-radius:1px;vertical-align:3px}
 .hist h4{margin:0;font-size:11.5px;font-weight:600;color:var(--muted)}
 .hist svg{display:block;margin-top:4px;touch-action:pan-y;cursor:ew-resize;-webkit-user-select:none;user-select:none}
 .hist svg:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
@@ -852,7 +856,7 @@ function renderOverview(){
     +indoorStat()
     +(function(){if(OUT&&typeof OUT.t==='number'&&typeof OUT.at==='number'&&Date.now()-OUT.at<3*3600000){var fx=c.day.hours[Math.min(23,Math.max(0,localOf(OUT.at).h))];return stat('Buiten nu, '+esc(OUT.name||'meetstation'),nf(OUT.t,0)+' °C','gemeten '+clock(OUT.at)+(c.minH>0&&fx?', verwachting '+nf(fx.temp,0)+' °C':''));}return '';})()
     +stat('Buitentemperatuur',nf(c.tmin,0)+' tot '+nf(c.tmax,0)+' °C','binnen ± '+nf(st.tset,1)+' °C')
-    +stat('Stroomprijs',eur(c.pmin)+' tot '+eur(c.pmax),(c.src==='own'?'eigen prijzen':(c.src==='epex'?'EPEX day-ahead':'indicatief profiel')))
+    +powerStat(c)
     +gasStat()
     +stat('Teruglevering',eur(fiMin)+' tot '+eur(fiMax),(st.fimode==='dyn'?'volgt de beurs':'vast bedrag')+(nNeg?', '+nNeg+' uur negatief':''))
     +'</div>';
@@ -882,6 +886,7 @@ function renderOverview(){
   html+='<div class="card"><h2>Wat nu te doen</h2><ul class="tip">'+tips.map(function(t){return '<li>'+t+'</li>';}).join('')+'</ul></div>';
   el.innerHTML=html;
   histBind(el);
+  yearBind(el);
   var lo=Math.min(0,c.pmin,fiMin), pr=niceTicks(lo*1.05,Math.max(c.pmax,fiMax)*1.05,4);
   chart($('ch-price'),{label:'Stroomprijs en terugleverprijs per uur',L:{min:pr.min,max:pr.max,ticks:pr.ticks,fmt:function(v){return nf(v,2);}},
     series:[{type:'bar',n:'Prijs',f:function(v){return eur(v,3)+'/kWh';},v:c.price,color:function(k){return c.cls[k]===0?'var(--good)':(c.cls[k]===1?'var(--mid)':'var(--bad)');}},
@@ -996,7 +1001,101 @@ function histBind(root){
 function gasStat(){
   var g=SNAP.gas;
   if(!g||typeof g.v!=='number'||typeof g.at!=='number'||Date.now()-g.at>36*3600000)return '';
-  return stat('Gasprijs beurs',eur(g.v)+' /m³','excl. btw, '+eur(g.v*1.21)+' met btw · prijs per dag');
+  return yearStat('gas','Gasprijs beurs',eur(g.v)+' /m³','excl. btw, '+eur(g.v*1.21)+' met btw · prijs per dag');
+}
+/* Tegel Stroomprijs, met de laagste en hoogste uurprijs per dag van het afgelopen jaar. */
+function powerStat(c){
+  return yearStat('power','Stroomprijs',eur(c.pmin)+' tot '+eur(c.pmax),(c.src==='own'?'eigen prijzen':(c.src==='epex'?'EPEX day-ahead':'indicatief profiel')));
+}
+/* Jaargrafiek in de tegels Gasprijs en Stroomprijs, uit prices-history.json: per dag de gasprijs of [min, max] in €/MWh.
+   Stroom reken ik om zoals elders in de app: maal 1,21 btw plus je opslag. */
+var PH=null,YV={};
+var mfmt=new Intl.DateTimeFormat('nl-NL',{timeZone:'UTC',month:'short'}),yfmt=new Intl.DateTimeFormat('nl-NL',{timeZone:'UTC',day:'numeric',month:'short',year:'numeric'});
+var YCFG={
+  gas:{title:'Gasprijs per dag, laatste jaar',label:'Gasprijs van de beurs per dag, afgelopen jaar',d:2,
+       lines:[[1,'var(--accent)','Gas']],row:function(v){return typeof v==='number'?[v]:null;},f:function(v){return eur(v,2)+'/m³';}},
+  power:{title:'Laagste en hoogste uurprijs per dag, laatste jaar',label:'Laagste en hoogste stroomprijs per dag, afgelopen jaar',d:2,
+       lines:[[2,'var(--bad)','Hoogste'],[1,'var(--good)','Laagste']],
+       row:function(v){return Array.isArray(v)&&typeof v[0]==='number'&&typeof v[1]==='number'?[v[0]/1000*1.21+st.opslag,v[1]/1000*1.21+st.opslag]:null;},f:function(v){return eur(v,3)+'/kWh';}}
+};
+function yearStat(k,l,v,s){
+  var cfg=YCFG[k],src=PH&&PH[k],rows=[];
+  YV[k]=null;
+  if(src&&typeof src==='object')Object.keys(src).sort().forEach(function(d){
+    var r=cfg.row(src[d]),p=d.split('-');
+    if(r)rows.push([Date.UTC(+p[0],+p[1]-1,+p[2],12)].concat(r));
+  });
+  if(rows.length<14)return stat(l,v,s);
+  YV[k]={rows:rows,t0:rows[0][0],t1:rows[rows.length-1][0]};
+  return '<div class="stat pstat"><div class="lbl">'+l+'</div><div class="val">'+v+'</div><div class="sub">'+s+'</div>'
+    +'<div class="hist" data-y="'+k+'"><h4>'+cfg.title+'</h4></div>'
+    +(cfg.lines.length>1?legend(cfg.lines.map(function(x){return [x[1],x[2].toLowerCase()];})):'')
+    +'<div class="hread" aria-live="polite"></div></div>';
+}
+function yearSvg(k,w){
+  var cfg=YCFG[k],V=YV[k],h=110,ml=40,mr=6,mt=6,mb=17,pw=w-ml-mr,ph=h-mt-mb,vals=[];
+  V.rows.forEach(function(r){for(var i=1;i<r.length;i++)vals.push(r[i]);});
+  var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals),sc=niceTicks(Math.min(0,lo),hi+(hi-lo)*0.05,3);
+  function X(ms){return ml+(ms-V.t0)/Math.max(1,V.t1-V.t0)*pw;}
+  function Y(v){return mt+ph-(v-sc.min)/(sc.max-sc.min)*ph;}
+  var s='<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" role="img" aria-label="'+esc(cfg.label)+'" tabindex="0" data-ml="'+ml+'" data-pw="'+pw+'">';
+  sc.ticks.forEach(function(t){var y=Y(t);s+='<line class="grid" x1="'+ml+'" x2="'+(w-mr)+'" y1="'+y+'" y2="'+y+'"/><text class="tick" x="'+(ml-5)+'" y="'+(y+4)+'" text-anchor="end">'+nf(t,sc.max-sc.min<0.5?2:1)+'</text>';});
+  /* Maandnamen op de eerste van de maand; op een smal scherm om de drie maanden. */
+  var step=pw<420?3:2,d0=new Date(V.t0),m=new Date(Date.UTC(d0.getUTCFullYear(),d0.getUTCMonth()+1,1));
+  for(;m.getTime()<=V.t1;m.setUTCMonth(m.getUTCMonth()+1)){
+    var x=X(m.getTime());
+    s+='<line class="grid" x1="'+x+'" x2="'+x+'" y1="'+(mt+ph)+'" y2="'+(mt+ph+3)+'"/>';
+    if(m.getUTCMonth()%step===0&&x>ml+12&&x<w-mr-12)s+='<text class="tick" x="'+x+'" y="'+(h-4)+'" text-anchor="middle">'+mfmt.format(m).replace('.','')+'</text>';
+  }
+  cfg.lines.forEach(function(l){
+    var p='',prev=null;
+    /* Een gat van meer dan twee dagen in de reeks laat ik open. */
+    V.rows.forEach(function(r){p+=(prev===null||r[0]-prev>2.5*86400000?'M':'L')+X(r[0]).toFixed(1)+','+Y(r[l[0]]).toFixed(1);prev=r[0];});
+    s+='<path d="'+p+'" fill="none" style="stroke:'+l[1]+';stroke-width:1.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    var last=V.rows[V.rows.length-1];
+    s+='<circle cx="'+X(last[0]).toFixed(1)+'" cy="'+Y(last[l[0]]).toFixed(1)+'" r="3" style="fill:'+l[1]+';stroke:var(--panel);stroke-width:2"/>';
+  });
+  s+='<line class="hcur" visibility="hidden" x1="0" x2="0" y1="'+mt+'" y2="'+(mt+ph)+'" style="stroke:var(--ink);stroke-width:1.5"/>';
+  return s+'</svg>';
+}
+/* Cursor per tegel: de dag onder de vinger of muis, met de waarde(n) eronder. */
+function yearBind(root){
+  root.querySelectorAll('.hist[data-y]').forEach(function(el){
+    var k=el.dataset.y,cfg=YCFG[k],V=YV[k];
+    if(!V)return;
+    el.insertAdjacentHTML('beforeend',yearSvg(k,Math.max(220,Math.floor(el.clientWidth))));
+    var sv=el.querySelector('svg'),rd=el.parentNode.querySelector('.hread'),ln=sv.querySelector('.hcur'),cur=null;
+    function show(i){
+      cur=i;var r=V.rows[i],ml=+sv.dataset.ml,pw=+sv.dataset.pw,x=ml+(r[0]-V.t0)/Math.max(1,V.t1-V.t0)*pw;
+      ln.setAttribute('x1',x);ln.setAttribute('x2',x);ln.setAttribute('visibility','visible');
+      rd.textContent='';
+      var b=document.createElement('b');b.textContent=yfmt.format(new Date(r[0])).replace('.','');rd.appendChild(b);
+      cfg.lines.forEach(function(l){
+        var sp=document.createElement('span'),ic=document.createElement('i'),em=document.createElement('em');
+        ic.style.background=l[1];sp.appendChild(ic);sp.appendChild(document.createTextNode(l[2]+' '));
+        em.textContent=cfg.f(r[l[0]]);sp.appendChild(em);rd.appendChild(sp);
+      });
+    }
+    function hide(){cur=null;ln.setAttribute('visibility','hidden');rd.textContent='Beweeg over de grafiek of tik erop voor eerdere prijzen.';}
+    function at(ev){
+      var bb=sv.getBoundingClientRect(),vb=sv.viewBox.baseVal.width,fx=(ev.clientX-bb.left)*(vb/Math.max(1,bb.width));
+      var ms=V.t0+Math.max(0,Math.min(1,(fx-(+sv.dataset.ml))/(+sv.dataset.pw)))*(V.t1-V.t0),best=0;
+      V.rows.forEach(function(r,i){if(Math.abs(r[0]-ms)<Math.abs(V.rows[best][0]-ms))best=i;});
+      show(best);
+    }
+    var down=false;
+    sv.addEventListener('pointerdown',function(ev){down=true;try{sv.setPointerCapture(ev.pointerId);}catch(e){}at(ev);});
+    sv.addEventListener('pointermove',function(ev){if(down||ev.pointerType==='mouse')at(ev);});
+    sv.addEventListener('pointerup',function(){down=false;});
+    sv.addEventListener('pointercancel',function(){down=false;});
+    sv.addEventListener('pointerleave',function(ev){if(ev.pointerType==='mouse')hide();});
+    sv.addEventListener('keydown',function(ev){
+      var i=cur===null?V.rows.length-1:cur;
+      if(ev.key==='ArrowRight'){show(Math.min(V.rows.length-1,i+1));ev.preventDefault();}
+      else if(ev.key==='ArrowLeft'){show(Math.max(0,i-1));ev.preventDefault();}
+    });
+    hide();
+  });
 }
 function stat(l,v,s){return '<div class="stat"><div class="lbl">'+l+'</div><div class="val">'+v+'</div><div class="sub">'+s+'</div></div>';}
 
@@ -1386,10 +1485,10 @@ function boot(d,s){
   measRemoteLoad().then(function(){afterMeasChange();});
 }
 if(typeof fetch==='function'&&/^https?:$/.test(location.protocol)){
-  Promise.all([getJson('data.json'),getJson('settings.json'),getJson('indoor.json'),getJson('outside.json'),getJson('indoor-history.json')]).then(function(r){try{if(r[2]&&typeof r[2]==='object')IND=r[2];if(r[3]&&typeof r[3]==='object')OUT=r[3];if(r[4]&&typeof r[4]==='object')HIST=r[4];}catch(e){}boot(r[0],r[1]);liveRefresh();});
+  Promise.all([getJson('data.json'),getJson('settings.json'),getJson('indoor.json'),getJson('outside.json'),getJson('indoor-history.json'),getJson('prices-history.json')]).then(function(r){try{if(r[2]&&typeof r[2]==='object')IND=r[2];if(r[3]&&typeof r[3]==='object')OUT=r[3];if(r[4]&&typeof r[4]==='object')HIST=r[4];if(r[5]&&typeof r[5]==='object')PH=r[5];}catch(e){}boot(r[0],r[1]);liveRefresh();});
   setInterval(function(){if(booted)liveRefresh();},1800000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden&&booted&&SNAP.fetched&&Date.now()-SNAP.fetched>1200000)liveRefresh();});
-  setInterval(function(){Promise.all([getJson('indoor.json'),getJson('outside.json'),getJson('indoor-history.json')]).then(function(r){if(!booted)return;if(r[0]&&typeof r[0]==='object')IND=r[0];if(r[1]&&typeof r[1]==='object')OUT=r[1];if(r[2]&&typeof r[2]==='object')HIST=r[2];measStatus();renderActive();});},300000);
+  setInterval(function(){Promise.all([getJson('indoor.json'),getJson('outside.json'),getJson('indoor-history.json'),getJson('prices-history.json')]).then(function(r){if(!booted)return;if(r[0]&&typeof r[0]==='object')IND=r[0];if(r[1]&&typeof r[1]==='object')OUT=r[1];if(r[2]&&typeof r[2]==='object')HIST=r[2];if(r[3]&&typeof r[3]==='object')PH=r[3];measStatus();renderActive();});},300000);
   setTimeout(function(){boot();liveRefresh();},2500);
 }else boot();
 })();

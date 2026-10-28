@@ -8,6 +8,7 @@ Een webpagina die je zonder eigen computer online zet. De volledige handleiding 
 |---|---|
 | `index.html` | de app |
 | `data.json` | startgegevens (weer en prijzen); wordt elk uur bijgewerkt |
+| `prices-history.json` | gasprijs en laagste/hoogste stroomprijs per dag van het afgelopen jaar, voor de grafieken in de tegels; door `update.py` bijgehouden |
 | `settings.json` | optioneel: standaardwaarden voor alle apparaten. Zet hier geen persoonlijke gegevens in als de pagina openbaar staat |
 | `ewelink.py` | haalt temperatuur en luchtvochtigheid van twee sensors uit eWeLink en schrijft `indoor.json` (zie hieronder) |
 | `update.py` | haalt weer (KNMI HARMONIE via Open-Meteo) en EPEX-prijzen op; ook handmatig te draaien |
