@@ -267,7 +267,7 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
 <ul class="tip">
 <li><b>Weer:</b> KNMI HARMONIE (2 km boven Nederland) en ECMWF via Open-Meteo.com, met MET Norway als reserve. In de voettekst staat welke bron actief is.</li>
 <li><b>Prijzen:</b> EPEX day-ahead Nederland via Energy-Charts. Rond 13:00 verschijnen de prijzen van de volgende dag.</li>
-<li><b>Gas:</b> een gemiddeld consumententarief dat je zelf instelt. De groothandelsprijs (TTF) is alleen ter informatie.</li>
+<li><b>Gas:</b> de beursprijs van de dag (EnergyZero, excl. btw) plus je opslag, standaard € 1,00 zoals bij Next Energy. Je kunt ook een vast bedrag per m³ instellen.</li>
 <li><b>Ververs:</b> de pagina haalt bij openen en daarna elk half uur zelf nieuwe gegevens op, als de browser dat toestaat. Staat dat uit, dan gebruikt hij het bestand data.json dat elk uur wordt bijgewerkt.</li>
 </ul>
 <p class="muted small">Open-Meteo is gratis voor niet-commercieel gebruik (CC BY 4.0). MET Norway: CC BY 4.0.</p>
@@ -337,7 +337,7 @@ var INSUL={zeer:{n:'Zeer goed (label A+ of beter)',v:0.9},goed:{n:'Goed (label A
 var DEF={
   insul:'goed',area:130,wtw:true,tset:20.5,band:0.5,supply:32,pmax:6,heatsrc:'hybride',cop:0.36,gaseff:0.96,
   kwp:4.5,paz:180,tilt:35,base:0.25,
-  opslag:0.14,gas:1.70,feedin:0.06,fimode:'dyn',terugkosten:0.02,conn:17.3,ground:74,floor:'warp',upel:true,mills:3,meas:{ben:{t:0,h:0,at:0},bov:{t:0,h:0,at:0}},stove:true,stovekw:4,stoveh:3,woodcost:0,showermin:8,showerlpm:8,
+  opslag:0.14,gas:1.70,gasmode:'beurs',gasopslag:1.00,feedin:0.06,fimode:'dyn',terugkosten:0.02,conn:17.3,ground:74,floor:'warp',upel:true,mills:3,meas:{ben:{t:0,h:0,at:0},bov:{t:0,h:0,at:0}},stove:true,stovekw:4,stoveh:3,woodcost:0,showermin:8,showerlpm:8,
   appl:[
     {name:'Vaatwasser',kwh:0.9,dur:2.5,from:8,to:23,typ:20,kw:2.0},
     {name:'Wasmachine',kwh:0.7,dur:2,from:8,to:21,typ:18,kw:2.0},
@@ -661,7 +661,7 @@ function compute(di){
 }
 function heating(c){
   var H=st.area*INSUL[st.insul].v*(st.wtw?0.92:1)/1000, C=Math.min(st.ground,st.area)*(FLOOR[st.floor]||FLOOR.zwaar).c+Math.max(0,st.area-st.ground)*20;
-  var gasHeat=st.gas/(9.77*st.gaseff);
+  var gasHeat=gasPrice().v/(9.77*st.gaseff);
   var cop=c.hrs.map(function(h){return copAt(h.temp);});
   var hp=c.hrs.map(function(h,i){return effCost(h,1.2,c.price[i],c.fi[i])/cop[i];});
   var src=hp.map(function(v){return st.heatsrc==='gas'?'gas':(st.heatsrc==='wp'?'wp':(v<=gasHeat?'wp':'gas'));});
@@ -999,11 +999,17 @@ function histBind(root){
   });
   hide();
 }
+/* Gasprijs voor de berekening: beursprijs van vandaag plus opslag (dynamisch contract), anders het vaste bedrag. */
+function gasPrice(){
+  var g=SNAP.gas;
+  if(st.gasmode==='beurs'&&g&&typeof g.v==='number'&&typeof g.at==='number'&&Date.now()-g.at<48*3600000)return {v:g.v+st.gasopslag,beurs:true};
+  return {v:st.gas,beurs:false};
+}
 /* Tegel Gasprijs: beursprijs van vandaag uit data.json (EnergyZero), excl. btw. */
 function gasStat(){
   var g=SNAP.gas;
   if(!g||typeof g.v!=='number'||typeof g.at!=='number'||Date.now()-g.at>36*3600000)return '';
-  return yearStat('gas','Gasprijs beurs',eur(g.v)+' /m³','excl. btw, '+eur(g.v*1.21)+' met btw · prijs per dag');
+  return yearStat('gas','Gasprijs beurs',eur(g.v)+' /m³','excl. btw'+(st.gasmode==='beurs'?' · jij betaalt '+eur(g.v+st.gasopslag)+' (+ '+eur(st.gasopslag)+' opslag)':', '+eur(g.v*1.21)+' met btw')+' · prijs per dag');
 }
 /* Tegel Stroomprijs, met de laagste en hoogste uurprijs per dag van het afgelopen jaar. */
 function powerStat(c){
@@ -1106,8 +1112,8 @@ function renderAppliances(){
   var c=compute(ui.day),el=$('p-apparaten');
   if(!c){el.innerHTML='';return;}
   var html='<div class="card"><h2>Wanneer zet je ze aan?</h2><p class="muted small" style="margin-top:6px">Kosten per beurt voor '+esc(c.day.name)+', inclusief je eigen zonnestroom. De verbruiken en tijden pas je aan bij Instellingen.</p></div>';
-  var shL=st.showermin*st.showerlpm, shKwh=shL*1.163*28/1000, shM3=shKwh/(9.77*0.88), shCost=shM3*st.gas;
-  var shEco=st.showerlpm>6?shCost-st.showermin*6*1.163*28/1000/(9.77*0.88)*st.gas:0;
+  var shL=st.showermin*st.showerlpm, shKwh=shL*1.163*28/1000, shM3=shKwh/(9.77*0.88), shCost=shM3*gasPrice().v;
+  var shEco=st.showerlpm>6?shCost-st.showermin*6*1.163*28/1000/(9.77*0.88)*gasPrice().v:0;
   html+='<div class="card"><h3>Douchen en warm water</h3>'
     +'<p style="margin-top:6px">Je kunt douchen wanneer je wilt. Je warme water komt van gas en gas heeft geen uurprijs, dus het tijdstip maakt niets uit voor de kosten.</p>'
     +'<div class="kv"><div><b>'+eur(shCost)+'</b><span>per douche van '+nf(st.showermin,0)+' minuten ('+nf(shL,0)+' liter)</span></div>'
@@ -1173,7 +1179,9 @@ function renderHeating(){
   }
   if(h.useNow)tips.push('Beneden is nu <b>'+nf(h.nowT,1)+' °C</b> gemeten ('+(h.nowAuto?'sensor':'ingevuld')+' '+clock(h.nowAt)+'). De binnenlijn start daar'+(h.nowT>st.tset+st.band?'. Dat is warmer dan gewenst, dus de vloerverwarming blijft uit tot het rond '+nf(st.tset,1)+' °C is. Staat de zon op de sensor of brandt de houtkachel, dan kan de meting hoger zijn dan de rest van de woonkamer.':'.'));
   tips.push('Bron: <b>'+srcName+'</b>'+(st.heatsrc==='hybride'?', vandaag '+mixWp+' van de 24 uur op stroom':'')+'. Gemiddelde COP van de warmtepomp ongeveer '+nf(h.copAvg,1)+' bij '+nf(st.supply,0)+' °C aanvoer.');
-  if(SNAP.ttf)tips.push('Gas: de groothandelsprijs (TTF) was '+nf(SNAP.ttf.v,0)+' €/MWh op '+SNAP.ttf.d+'. Voor de berekening gebruik ik € '+nf(st.gas,2)+' per m³, dat is het gemiddelde consumententarief. Pas dit aan bij Instellingen als jouw contract afwijkt.');
+  var gp=gasPrice();
+  tips.push(gp.beurs?'Gas: ik reken met <b>'+eur(gp.v)+' per m³</b>, de beursprijs van vandaag ('+eur(SNAP.gas.v)+') plus '+eur(st.gasopslag)+' opslag, zoals Next Energy. Voor morgen en overmorgen gebruik ik dezelfde prijs; de nieuwe beursprijs komt elke ochtend om 06:00.'
+    :'Gas: ik reken met '+eur(gp.v)+' per m³'+(st.gasmode==='beurs'?', je vaste prijs, want de beursprijs van vandaag ontbreekt':'')+'. Pas dit aan bij Instellingen.');
   tips.push('Gas wordt pas goedkoper dan de warmtepomp als stroom meer kost dan ongeveer <b>'+eur(h.breakEven)+'</b> per kWh. Bij het huidige prijsverloop gebeurt dat '+(c.pmax>h.breakEven?'in de piek wel':'niet')+'.');
   if(h.upShare>0)tips.push('Boven verwarm je elektrisch met '+(st.mills>1?st.mills+' Mill-panelen':'een Mill-paneel')+': dat kost <b>'+nf(Math.max(1,h.copAvg),1)+' keer</b> zoveel per kWh warmte als de warmtepomp. Ongeveer '+nf(h.upShare*100,0)+'% van de warmtevraag valt hierop. Zet in de Mill-app een weekprogramma: comfort in <b>'+win(c.best.s,3)+'</b> en vlak voor het slapen, spaartemperatuur in <b>'+win(c.worst.s,3)+'</b> en in kamers die je niet gebruikt. Mill-panelen reageren snel, dus lang voorverwarmen hoeft niet.');
   tips.push('Houd de aanvoertemperatuur van de vloerverwarming laag ('+nf(st.supply,0)+' °C). Elke graad lager geeft een hogere COP.');
@@ -1273,7 +1281,9 @@ function buildSettings(){
     +'</div></div>';
   html+='<div class="card"><h2>Tarieven</h2><div class="form">'
     +num('opslag','Belasting en opslag per kWh (€, incl. btw)',{min:0,max:0.5,step:0.005,hint:'Energiebelasting plus inkoopkosten. Staat op je contract.'})
-    +num('gas','Gasprijs per m³ (€, alles inbegrepen)',{min:0.5,max:3,step:0.01,hint:'Gemiddeld variabel tarief op 9 okt 2026: € 1,74. Kijk op je jaarnota voor de jouwe.'})
+    +sel('gasmode','Gasprijs',[['beurs','Beursprijs plus opslag (dynamisch)'],['vast','Vast bedrag per m³']],'Dynamisch volgt de beursprijs van de dag, zoals bij Next Energy.')
+    +num('gasopslag','Opslag gas per m³ (€)',{min:0,max:2,step:0.01,hint:'Bovenop de beursprijs excl. btw uit de tegel Gasprijs beurs. Next Energy: € 1,00.'})
+    +num('gas','Vaste gasprijs per m³ (€, alles inbegrepen)',{min:0.5,max:3,step:0.01,hint:'Bij Vast bedrag, en als reserve als de beursprijs ontbreekt.'})
     +sel('fimode','Terugleververgoeding',[['dyn','Volgt de beursprijs (dynamisch contract)'],['vast','Vast bedrag per kWh']],'Bij een dynamisch contract kost terugleveren geld als de beursprijs negatief is.')
     +num('terugkosten','Terugleverkosten per kWh (€)',{min:0,max:0.3,step:0.005,hint:'Wat je leverancier per teruggeleverde kWh afhoudt. Kijk op je contract, veel leveranciers rekenen enkele centen.'})
     +num('feedin','Vast bedrag terugleveren per kWh (€)',{min:-0.1,max:0.4,step:0.005,hint:'Alleen in gebruik bij "Vast bedrag per kWh".'})
