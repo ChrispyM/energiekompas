@@ -1175,11 +1175,11 @@ function renderHeating(){
   tips.push('Bron: <b>'+srcName+'</b>'+(st.heatsrc==='hybride'?', vandaag '+mixWp+' van de 24 uur op stroom':'')+'. Gemiddelde COP van de warmtepomp ongeveer '+nf(h.copAvg,1)+' bij '+nf(st.supply,0)+' °C aanvoer.');
   if(SNAP.ttf)tips.push('Gas: de groothandelsprijs (TTF) was '+nf(SNAP.ttf.v,0)+' €/MWh op '+SNAP.ttf.d+'. Voor de berekening gebruik ik € '+nf(st.gas,2)+' per m³, dat is het gemiddelde consumententarief. Pas dit aan bij Instellingen als jouw contract afwijkt.');
   tips.push('Gas wordt pas goedkoper dan de warmtepomp als stroom meer kost dan ongeveer <b>'+eur(h.breakEven)+'</b> per kWh. Bij het huidige prijsverloop gebeurt dat '+(c.pmax>h.breakEven?'in de piek wel':'niet')+'.');
-  if(h.upShare>0)tips.push('Boven verwarm je elektrisch met '+(st.mills>1?st.mills+' Mill-panelen':'een Mill-paneel')+': dat kost <b>'+nf(1/Math.max(0.1,h.copAvg),1)+' keer</b> zoveel per kWh warmte als de warmtepomp. Ongeveer '+nf(h.upShare*100,0)+'% van de warmtevraag valt hierop. Zet in de Mill-app een weekprogramma: comfort in <b>'+win(c.best.s,3)+'</b> en vlak voor het slapen, spaartemperatuur in <b>'+win(c.worst.s,3)+'</b> en in kamers die je niet gebruikt. Mill-panelen reageren snel, dus lang voorverwarmen hoeft niet.');
+  if(h.upShare>0)tips.push('Boven verwarm je elektrisch met '+(st.mills>1?st.mills+' Mill-panelen':'een Mill-paneel')+': dat kost <b>'+nf(Math.max(1,h.copAvg),1)+' keer</b> zoveel per kWh warmte als de warmtepomp. Ongeveer '+nf(h.upShare*100,0)+'% van de warmtevraag valt hierop. Zet in de Mill-app een weekprogramma: comfort in <b>'+win(c.best.s,3)+'</b> en vlak voor het slapen, spaartemperatuur in <b>'+win(c.worst.s,3)+'</b> en in kamers die je niet gebruikt. Mill-panelen reageren snel, dus lang voorverwarmen hoeft niet.');
   tips.push('Houd de aanvoertemperatuur van de vloerverwarming laag ('+nf(st.supply,0)+' °C). Elke graad lager geeft een hogere COP.');
   tips.push('Bij zonuren in de middag krijg je gratis warmte door de ramen. Zet de thermostaat dan niet hoger, het plan houdt daar al rekening mee.');
   html+='<div class="card"><h2>Advies</h2><ul class="tip">'+tips.map(function(t){return '<li>'+t+'</li>';}).join('')+'</ul>'
-    +'<p class="muted small" style="margin-top:10px">Dit is een rekenmodel met je isolatieniveau en een gemiddelde vloermassa. Zie het als richting, niet als meting.</p></div>';
+    +'<p class="muted small" style="margin-top:10px">Dit is een rekenmodel met je isolatieniveau en de massa van je soort vloer. Zie het als richting, niet als meting.</p></div>';
   el.innerHTML=html;
   var ts=h.tin.concat(c.hrs.map(function(x){return x.temp;}));
   var tk=niceTicks(Math.min.apply(null,ts)-0.5,Math.max.apply(null,ts)+0.5,4);
