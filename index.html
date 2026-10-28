@@ -234,8 +234,8 @@ label.chk{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500
 <li><b>Stroomprijs:</b> de beursprijs van de volgende dag (EPEX day-ahead, uurgemiddelde) maal 1,21 btw, plus je opslag. Zijn de beursprijzen nog niet bekend, dan toont de app een typisch verloop en zegt dat erbij. Je kunt ook je eigen prijzen plakken.</li>
 <li><b>Terugleveren:</b> bij een dynamisch contract volgt de terugleverprijs de beurs. Is die negatief, dan kost terugleveren geld en loont het om zonnestroom zelf te gebruiken.</li>
 <li><b>Zonopbrengst:</b> uit de stand van de zon en de straling die het weermodel voorspelt. Zonder modelstraling schat de app die uit de bewolking.</li>
-<li><b>Warmte:</b> het huis verliest warmte naar buiten, wint zon en interne warmte, en de vloer slaat warmte op. Per uur kiest de app de goedkoopste bron (warmtepomp of gas). De elektrische panelen boven rekenen tegen de volle stroomprijs.</li>
-<li><b>Slim stoken:</b> de vloer mag een halve graad rond de gewenste temperatuur schommelen. Hij warmt op in de goedkope uren en rust in de dure.</li>
+<li><b>Warmte:</b> het huis verliest warmte naar buiten, wint zon en interne warmte, en de vloer slaat warmte op. Per uur kiest de app de goedkoopste bron (warmtepomp of gas). De Mill-panelen boven rekenen tegen de volle stroomprijs.</li>
+<li><b>Slim stoken:</b> de vloer mag een halve graad rond de gewenste temperatuur schommelen. Hij warmt op in de goedkope uren en rust in de dure. Een dunne WARP-vloer slaat minder warmte op dan een dekvloer; kies bij Instellingen het soort vloer, dan rekent de app daarmee.</li>
 <li><b>Houtkachel:</b> de app zoekt de avonduren met de duurste warmte en een grote warmtevraag. Alleen de benedenverdieping profiteert mee, dus het voordeel zit vooral in comfort.</li>
 </ul>
 </div>
@@ -329,13 +329,15 @@ var SNAP={
   cloud:[94.5,58.6,75.8,78.9,52.3,43,56.2,53.1,28.1,22.7,29.7,27.3,24.2,50,43,53.9,54.7,54.7,38.3,16.4,16.4,21.9,57.8,25.8,13.3,34.4,29.7,71.9,45.3,29.7,36.7,100,100,100,43.7,85.9,67.2,97.7,100,100,100,100,96.9,100,100,100,100,100,100,100,100,100,100,73.4,98.4,99.2,100,100,71.1,100,93,35.9,32,30.05,28.1,26.15]
 };
 var TZ='Europe/Amsterdam', LAT=52.37, LON=4.90;
+/* Warmte die de verdieping met vloerverwarming per m² en graad opslaat (Wh). WARP is dun en droog: weinig massa, snel warm. */
+var FLOOR={warp:{n:'WARP Systems (dun, reageert snel)',c:25},zwaar:{n:'Dekvloer (zwaar, houdt warmte lang vast)',c:60}};
 var INSUL={zeer:{n:'Zeer goed (label A+ of beter)',v:0.9},goed:{n:'Goed (label A of B)',v:1.4},matig:{n:'Matig (label C of D)',v:2.1},slecht:{n:'Slecht (label E, F of G)',v:3.0}};
 
 /* ---------- Instellingen ---------- */
 var DEF={
   insul:'goed',area:130,wtw:true,tset:20.5,band:0.5,supply:32,pmax:6,heatsrc:'hybride',cop:0.36,gaseff:0.96,
   kwp:4.5,paz:180,tilt:35,base:0.25,
-  opslag:0.14,gas:1.70,feedin:0.06,fimode:'dyn',terugkosten:0.02,conn:17.3,ground:74,upel:true,meas:{ben:{t:0,h:0,at:0},bov:{t:0,h:0,at:0}},stove:true,stovekw:4,stoveh:3,woodcost:0,showermin:8,showerlpm:8,
+  opslag:0.14,gas:1.70,feedin:0.06,fimode:'dyn',terugkosten:0.02,conn:17.3,ground:74,floor:'warp',upel:true,mills:3,meas:{ben:{t:0,h:0,at:0},bov:{t:0,h:0,at:0}},stove:true,stovekw:4,stoveh:3,woodcost:0,showermin:8,showerlpm:8,
   appl:[
     {name:'Vaatwasser',kwh:0.9,dur:2.5,from:8,to:23,typ:20,kw:2.0},
     {name:'Wasmachine',kwh:0.7,dur:2,from:8,to:21,typ:18,kw:2.0},
@@ -658,7 +660,7 @@ function compute(di){
   return c;
 }
 function heating(c){
-  var H=st.area*INSUL[st.insul].v*(st.wtw?0.92:1)/1000, C=Math.min(st.ground,st.area)*60+Math.max(0,st.area-st.ground)*20;
+  var H=st.area*INSUL[st.insul].v*(st.wtw?0.92:1)/1000, C=Math.min(st.ground,st.area)*(FLOOR[st.floor]||FLOOR.zwaar).c+Math.max(0,st.area-st.ground)*20;
   var gasHeat=st.gas/(9.77*st.gaseff);
   var cop=c.hrs.map(function(h){return copAt(h.temp);});
   var hp=c.hrs.map(function(h,i){return effCost(h,1.2,c.price[i],c.fi[i])/cop[i];});
@@ -874,7 +876,7 @@ function renderOverview(){
   if(c.vent&&!c.vent.none&&(c.vent.level==='hoog'||c.vent.level==='verhoogd'))tips.unshift(c.vent.win?'De lucht is te vochtig. Ventileer tussen <b>'+win(c.vent.win.s,Math.min(c.vent.win.n,4))+'</b>, dan is het buiten droger dan binnen.':'De lucht binnen is vochtig, maar buiten is het niet droger. Zie het blok Ventileren voor wat dan helpt.');
   tips.push('Plan afwas, was en droger tussen <b>'+win(b.s,3)+'</b>. Dat is de goedkoopste combinatie van prijs en eigen zonnestroom.');
   tips.push('Vermijd <b>'+win(wv.s,3)+'</b> voor grote verbruikers. Hier zit de piek van de dag.');
-  tips.push('Verwarming: laat de vloer extra opwarmen in <b>'+win(h.cheapWin.s,3)+'</b>. Een vloer koelt langzaam af, dus je merkt het niet als hij in de dure uren uit staat. Verwachte besparing ongeveer '+eur(Math.max(0,h.saving))+' op deze dag.');
+  tips.push('Verwarming: laat de vloer extra opwarmen in <b>'+win(h.cheapWin.s,3)+'</b>. '+(st.floor==='warp'?'Je WARP-vloer is dun en reageert snel: hij is snel warm, maar koelt ook binnen 1 à 2 uur weer af. Zet hem in de dure uren een halve graad lager in plaats van uit.':'Een vloer koelt langzaam af, dus je merkt het niet als hij in de dure uren uit staat.')+' Verwachte besparing ongeveer '+eur(Math.max(0,h.saving))+' op deze dag.');
   if(h.gasHeat>h.hp.reduce(function(a,b){return a+b;},0)/24)tips.push('Een kWh warmte via de warmtepomp kost nu gemiddeld '+nf(h.gasHeat/(h.hp.reduce(function(a,b){return a+b;},0)/24),1)+' keer minder dan via gas.');
   else tips.push('Gas is vandaag voordeliger dan de warmtepomp voor het verwarmen. Controleer je COP-instelling bij Instellingen.');
   if(h.stove&&h.stove.saving>0.05)tips.push('Houtkachel: steek hem aan rond <b>'+hh(h.stove.s)+'</b>, dat scheelt ongeveer '+eur(h.stove.saving)+' aan warmte. Zet de thermostaat zolang lager, hij zit in dezelfde kamer.');
@@ -1146,7 +1148,7 @@ function renderHeating(){
   var mixWp=h.src.filter(function(s){return s==='wp';}).length;
   var html='';
   html+='<div class="card hero"><div class="lbl">Extra opwarmen in</div><div class="big">'+win(h.cheapWin.s,3)+'</div>'
-    +'<p class="muted" style="margin-top:4px">Dit zijn de goedkoopste uren voor warmte op '+esc(d.name)+' ('+eur(h.cheapWin.avg,3)+' per kWh warmte, inclusief je eigen zonnestroom). Laat de vloer dan een halve graad oplopen en sla de duurste uren over.</p></div>';
+    +'<p class="muted" style="margin-top:4px">Dit zijn de goedkoopste uren voor warmte op '+esc(d.name)+' ('+eur(h.cheapWin.avg,3)+' per kWh warmte, inclusief je eigen zonnestroom). Laat de vloer dan een halve graad oplopen en sla de duurste uren over.'+(st.floor==='warp'?' Je WARP-vloer is dun: hij is snel warm, maar de extra warmte houdt maar 1 à 2 uur stand. Verschuif dus niet te ver vooruit.':'')+'</p></div>';
   html+='<div class="stats">'
     +stat('Warmtevraag',nf(h.smart.q,0)+' kWh','bij '+nf(st.tset,1)+' °C, '+INSUL[st.insul].n.split(' (')[0].toLowerCase()+' geïsoleerd')
     +stat('Kosten, vast stoken',eur(h.base.eur),'altijd precies '+nf(st.tset,1)+' °C')
@@ -1173,7 +1175,7 @@ function renderHeating(){
   tips.push('Bron: <b>'+srcName+'</b>'+(st.heatsrc==='hybride'?', vandaag '+mixWp+' van de 24 uur op stroom':'')+'. Gemiddelde COP van de warmtepomp ongeveer '+nf(h.copAvg,1)+' bij '+nf(st.supply,0)+' °C aanvoer.');
   if(SNAP.ttf)tips.push('Gas: de groothandelsprijs (TTF) was '+nf(SNAP.ttf.v,0)+' €/MWh op '+SNAP.ttf.d+'. Voor de berekening gebruik ik € '+nf(st.gas,2)+' per m³, dat is het gemiddelde consumententarief. Pas dit aan bij Instellingen als jouw contract afwijkt.');
   tips.push('Gas wordt pas goedkoper dan de warmtepomp als stroom meer kost dan ongeveer <b>'+eur(h.breakEven)+'</b> per kWh. Bij het huidige prijsverloop gebeurt dat '+(c.pmax>h.breakEven?'in de piek wel':'niet')+'.');
-  if(h.upShare>0)tips.push('Boven verwarm je elektrisch met panelen: dat kost <b>'+nf(1/Math.max(0.1,h.copAvg),1)+' keer</b> zoveel per kWh warmte als de warmtepomp. Zet de panelen in slaapkamers en ongebruikte kamers een paar graden lager en laat ze alleen in de goedkope uren opwarmen. Ongeveer '+nf(h.upShare*100,0)+'% van de warmtevraag valt hierop.');
+  if(h.upShare>0)tips.push('Boven verwarm je elektrisch met '+(st.mills>1?st.mills+' Mill-panelen':'een Mill-paneel')+': dat kost <b>'+nf(1/Math.max(0.1,h.copAvg),1)+' keer</b> zoveel per kWh warmte als de warmtepomp. Ongeveer '+nf(h.upShare*100,0)+'% van de warmtevraag valt hierop. Zet in de Mill-app een weekprogramma: comfort in <b>'+win(c.best.s,3)+'</b> en vlak voor het slapen, spaartemperatuur in <b>'+win(c.worst.s,3)+'</b> en in kamers die je niet gebruikt. Mill-panelen reageren snel, dus lang voorverwarmen hoeft niet.');
   tips.push('Houd de aanvoertemperatuur van de vloerverwarming laag ('+nf(st.supply,0)+' °C). Elke graad lager geeft een hogere COP.');
   tips.push('Bij zonuren in de middag krijg je gratis warmte door de ramen. Zet de thermostaat dan niet hoger, het plan houdt daar al rekening mee.');
   html+='<div class="card"><h2>Advies</h2><ul class="tip">'+tips.map(function(t){return '<li>'+t+'</li>';}).join('')+'</ul>'
@@ -1240,8 +1242,10 @@ function buildSettings(){
   html+='<div class="card"><h2>Woning en verwarming</h2><div class="form">'
     +sel('insul','Isolatie van de woning',Object.keys(INSUL).map(function(k){return [k,INSUL[k].n];}),'Kies het niveau dat het best past bij je energielabel.')
     +num('area','Woonoppervlak (m²)',{min:30,max:500,step:1})
-    +'<label class="f">Boven elektrisch verwarmd<small>Panelen op stroom (rendement 1), de rest van het huis.</small><span class="chk" style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="f-upel" data-path="upel"'+(st.upel?' checked':'')+'> Ja, met panelen</span></label>'
-    +num('ground','Oppervlak met vloerverwarming (m²)',{min:10,max:300,step:1,hint:'Alleen de benedenverdieping. Een zware vloer houdt warmte lang vast, lichtere verdiepingen reageren sneller.'})
+    +'<label class="f">Boven elektrisch verwarmd<small>Mill-panelen op stroom (rendement 1), bediend met de Mill-app. Ze verwarmen de rest van het huis.</small><span class="chk" style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="f-upel" data-path="upel"'+(st.upel?' checked':'')+'> Ja, met Mill-panelen</span></label>'
+    +num('mills','Aantal Mill-panelen boven',{min:1,max:10,step:1})
+    +num('ground','Oppervlak met vloerverwarming (m²)',{min:10,max:300,step:1,hint:'Alleen de benedenverdieping.'})
+    +sel('floor','Soort vloerverwarming',Object.keys(FLOOR).map(function(k){return [k,FLOOR[k].n];}),'Een dunne vloer zoals WARP warmt snel op maar houdt de warmte maar kort vast. Een zware dekvloer andersom.')
     +'<label class="f">Ventilatie met warmtewisselaar<small>Terugwinning van warmte uit afgezogen lucht.</small><span class="chk" style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="f-wtw" data-path="wtw"'+(st.wtw?' checked':'')+'> Ja, aanwezig</span></label>'
     +sel('heatsrc','Warmtebron',[['hybride','Hybride (warmtepomp en gas)'],['wp','Alleen warmtepomp'],['gas','Alleen gasketel']],'Het plan kiest per uur de goedkoopste bron.')
     +num('tset','Gewenste binnentemperatuur (°C)',{min:15,max:25,step:0.5})

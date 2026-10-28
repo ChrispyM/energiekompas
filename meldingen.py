@@ -4,7 +4,8 @@ Leest data.json, indoor.json en prices-history.json van de gepubliceerde site en
 
 Meldingen:
 - Ventileren heeft geen zin (per verdieping): binnen vochtig maar buiten niet droger, of binnen droog en buiten droger.
-- Stroom: rond 13:30 de goedkope en dure uren van morgen, en 30 minuten voor een goedkoop of duur blok een herinnering.
+- Stroom: rond 13:30 de goedkope en dure uren van morgen, en 30 minuten voor een goedkoop of duur blok een herinnering,
+  met wat je met de WARP-vloerverwarming (beneden) en de Mill-panelen (boven) doet.
 - Gas en stroom: de prijs van vandaag (gas) of morgen (stroom) wijkt meer dan 10% af van het gemiddelde van de week ervoor.
 
 Alleen standaardbibliotheek (Python 3.9+). Test met: python3 meldingen.py --droog [--nu 2026-10-28T13:40]"""
@@ -122,6 +123,10 @@ def buiten_per_uur(data, now):
         out.append((start + i * 3600000, abs_hum(t, h)))
     return out
 
+# Wat je per verdieping aan de verwarming kunt doen: beneden WARP-vloerverwarming, boven Mill-panelen.
+WARMER = {"Beneden": "zet de WARP-vloerverwarming een halve graad hoger (die reageert snel)",
+          "Boven": "zet de Mill-panelen boven in de Mill-app een halve graad hoger"}
+
 def vent_status(naam, m, buiten, now):
     """Geeft (sleutel, tekst) als ventileren op deze verdieping niet rendabel is, anders None."""
     if not m or not isinstance(m.get("h"), (int, float)) or not isinstance(m.get("t"), (int, float)):
@@ -155,7 +160,7 @@ def vent_status(naam, m, buiten, now):
                     kop + "\nNu niet ventileren: buiten is het niet droger. Ventileer %s, dan is de lucht buiten droger dan binnen." % uren(s, e))
         return ("vochtig-geen",
                 kop + "\nVentileren heeft vandaag geen zin: buiten is de lucht niet droger. Houd de WTW hoog zonder ramen open, "
-                      "zet de verwarming een halve graad hoger en laat de was niet binnen drogen.")
+                      "%s (elke graad warmer geeft 3 à 4 procentpunt minder vochtigheid) en laat de was niet binnen drogen." % WARMER[naam])
     if m["h"] < 40 and gain > 1.0:
         return ("droog",
                 kop + "\nNiet extra ventileren: buiten is de lucht droger, dus het wordt binnen nog droger. Houd de ventilatie op de gewone stand.")
@@ -210,9 +215,11 @@ def main():
                     continue
                 gem = sum(b["p"]) / len(b["p"])
                 if b["c"] == 0:
-                    berichten.append("🟢 <b>Goedkope stroom %s</b> (gem. %s/kWh). Goed moment voor de vaatwasser, de was of de droger." % (uren(b["s"], b["e"]), eur(gem, 3)))
+                    berichten.append("🟢 <b>Goedkope stroom %s</b> (gem. %s/kWh). Goed moment voor de vaatwasser, de was of de droger. "
+                                     "Zet de WARP-vloer beneden een halve graad hoger en laat boven de Mill-panelen nu opwarmen." % (uren(b["s"], b["e"]), eur(gem, 3)))
                 else:
-                    berichten.append("🔴 <b>Dure stroom %s</b> (gem. %s/kWh). Stel grote verbruikers uit tot daarna." % (uren(b["s"], b["e"]), eur(gem, 3)))
+                    berichten.append("🔴 <b>Dure stroom %s</b> (gem. %s/kWh). Stel grote verbruikers uit tot daarna. "
+                                     "Zet de Mill-panelen boven op spaarstand in de Mill-app; de WARP-vloer beneden een halve graad lager (niet uit, hij koelt snel af)." % (uren(b["s"], b["e"]), eur(gem, 3)))
                 gemeld.add(tag)
         state["blokken"] = sorted(t for t in gemeld if t[:10] >= today)
 
